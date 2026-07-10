@@ -46,6 +46,11 @@ gate, a `justfile`, a CI-lint workflow, and offsite Forgejo mirror registration 
   *wrapper* only — the compiled libghostty bytes are exactly upstream's, so the "unmodified upstream"
   claim holds. The script finds the `.a` by glob (not by the `ghostty-internal.a` name) so a future
   upstream rename doesn't break it.
+- **Strip debug symbols (`strip -S`).** Zig's ReleaseFast archive carries ~220MB of DWARF (~280MB →
+  ~48MB stripped). `strip -S` removes debug symbols only; the exported `ghostty_*` C API is untouched,
+  so static linking is unaffected. Without this the vendored binary is 7× larger for no benefit —
+  warden never debugs into libghostty. Don't drop the strip to "keep symbols"; reproduce a
+  symbolicated build from the pinned commit if ever needed.
 - **Build on `macos-15`, not `macos-26`.** Ghostty pins **Zig 0.15.2**, which could not link a
   macOS 26 SDK. Sequoia's 15.x SDK links cleanly. The runner-OS choice *is* the unblock — the whole
   reason a local build failed but CI works. If you must move runners, that SDK-link constraint is why

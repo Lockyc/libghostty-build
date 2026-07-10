@@ -62,6 +62,16 @@ rm -rf "$STAGE" "$OUT/GhosttyKit.xcframework"
 mkdir -p "$STAGE"
 cp "$LIB" "$STAGE/libghostty.a"
 cp -R "$MSLICE/Headers" "$STAGE/Headers"
+
+# Strip debug symbols: Zig's ReleaseFast archive carries ~220MB of DWARF that
+# balloons the vendored binary (280MB -> ~48MB). `strip -S` removes only debug
+# symbols; the exported ghostty_* C API stays intact, so static linking is
+# unaffected. warden doesn't debug into libghostty; a symbolicated build can be
+# reproduced from the pinned commit if ever needed.
+echo "[*] before strip: $(du -h "$STAGE/libghostty.a" | cut -f1)"
+strip -S "$STAGE/libghostty.a"
+echo "[*] after strip:  $(du -h "$STAGE/libghostty.a" | cut -f1)"
+
 xcodebuild -create-xcframework \
   -library "$STAGE/libghostty.a" -headers "$STAGE/Headers" \
   -output "$OUT/GhosttyKit.xcframework"
