@@ -1,0 +1,127 @@
+name: Build GhosttyKit
+
+# Builds GhosttyKit.xcframework (Ghostty's macOS embedding framework) from the
+# commit pinned in GHOSTTY_REF, and publishes it as a release asset that warden
+# vendors. Manual for now — bumping GHOSTTY_REF and re-running is the release.
+on:
+  workflow_dispatch:
+    inputs:
+      ghostty_ref:
+        description: "Override Ghostty ref (tag/branch/SHA). Empty = use GHOSTTY_REF file."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write        # create the release
+  id-token: write        # build provenance attestation
+  attestations: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    runs-on: macos-15
+    outputs:
+      ref: ${{ steps.r.outputs.ref }}
+      sha: ${{ steps.r.outputs.sha }}
+      short: ${{ steps.r.outputs.short }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: r
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_REF: ${{ github.event.inputs.ghostty_ref }}
+        run: |
+          REF="${INPUT_REF:-$(tr -d '[:space:]' < GHOSTTY_REF)}"
+          [ -n "$REF" ] || { echo "[!] no ref (empty input and GHOSTTY_REF)"; exit 1; }
+          SHA=$(gh api "repos/ghostty-org/ghostty/commits/$REF" --jq '.sha')
+          [ -n "$SHA" ] || { echo "[!] could not resolve $REF to a commit"; exit 1; }
+          echo "ref=$REF"            >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA"            >> "$GITHUB_OUTPUT"
+          echo "short=${SHA:0:7}"    >> "$GITHUB_OUTPUT"
+          echo "[*] $REF -> $SHA"
+
+  build:
+    needs: resolve
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [aarch64-macos, x86_64-macos]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+      - name: Clone Ghostty @ pinned sha
+        run: |
+          git clone --filter=blob:none https://github.com/ghostty-org/ghostty ghostty-src
+          git -C ghostty-src checkout --detach "${{ needs.resolve.outputs.sha }}"
+      - name: Build ${{ matrix.target }}
+        run: ./scripts/build-target.sh "$PWD/ghostty-src" "${{ matrix.target }}" "$PWD/out/${{ matrix.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-${{ matrix.target }}
+          path: out/${{ matrix.target }}
+          compression-level: 0
+          retention-days: 1
+
+  assemble:
+    needs: [resolve, build]
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: staged
+      - name: Assemble universal GhosttyKit.xcframework
+        run: |
+          set -euo pipefail
+          mkdir -p universal/lib universal/include
+          lipo -create \
+            staged/stage-aarch64-macos/lib/libghostty.a \
+            staged/stage-x86_64-macos/lib/libghostty.a \
+            -output universal/lib/libghostty.a
+          # headers are arch-independent; take one arch's copy
+          cp -R staged/stage-aarch64-macos/include/. universal/include/
+          echo "[*] lipo archs: $(lipo -archs universal/lib/libghostty.a)"
+
+          rm -rf GhosttyKit.xcframework
+          xcodebuild -create-xcframework \
+            -library universal/lib/libghostty.a -headers universal/include \
+            -output GhosttyKit.xcframework
+          echo "[*] slice(s): $(ls GhosttyKit.xcframework | grep -v Info.plist | tr '\n' ' ')"
+
+          ditto -c -k --sequesterRsrc --keepParent GhosttyKit.xcframework GhosttyKit.xcframework.zip
+          shasum -a 256 GhosttyKit.xcframework.zip | tee GhosttyKit.xcframework.zip.sha256
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: GhosttyKit.xcframework.zip
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="ghostty-${{ needs.resolve.outputs.short }}"
+          NOTES=$(cat <<EOF
+          GhosttyKit.xcframework — universal macOS (arm64 + x86_64) static libghostty.
+
+          Built from **unmodified** upstream Ghostty:
+          - ref: \`${{ needs.resolve.outputs.ref }}\`
+          - sha: \`${{ needs.resolve.outputs.sha }}\`
+
+          Zig 0.15.2, \`macos-15\` runner. Consumed by [warden](https://github.com/lockyc/warden)
+          via \`just revendor-ghostty\`. Verify with the attached \`.sha256\` and the GitHub build
+          provenance attestation.
+          EOF
+          )
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "$NOTES" \
+            GhosttyKit.xcframework.zip GhosttyKit.xcframework.zip.sha256 \
+            || gh release upload "$TAG" GhosttyKit.xcframework.zip GhosttyKit.xcframework.zip.sha256 --clobber

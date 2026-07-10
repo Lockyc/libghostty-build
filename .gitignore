@@ -1,0 +1,17 @@
+# Build outputs / working dirs (CI-only; never committed)
+/ghostty-src/
+/out/
+/staged/
+/universal/
+*.xcframework
+*.xcframework.zip
+*.sha256
+.zig-local-cache/
+.zig-cache/
+zig-out/
+
+# macOS
+.DS_Store
+
+# Agent worktrees (house convention)
+.claude/worktrees/
