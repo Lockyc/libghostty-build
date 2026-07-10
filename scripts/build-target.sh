@@ -34,8 +34,6 @@ echo "[*] zig build libghostty  target=$TARGET"
     -Demit-macos-app=false \
     -Demit-docs=false \
     -Dsentry=false \
-    -Dcustom-shaders=false \
-    -Dinspector=false \
     -Dtarget="$TARGET"
 )
 
