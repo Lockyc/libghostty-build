@@ -30,13 +30,22 @@ gate, a `justfile`, a CI-lint workflow, and offsite Forgejo mirror registration 
 
 ## Load-bearing invariants (don't regress)
 
-- **Let Ghostty build its own xcframework — don't hand-assemble.** The build calls
+- **Let Ghostty *compile* its own xcframework — don't hand-assemble the library.** The build calls
   `zig build -Demit-xcframework=true` (with `-Dxcframework-target=universal`, the default), which
-  cross-compiles both arches and assembles `macos/GhosttyKit.xcframework` with headers included. The
-  earlier hand-rolled path (per-arch `libghostty.a` via `-Dapp-runtime=none` + `lipo` +
-  `xcodebuild -create-xcframework`) **fails**: on Darwin, `-Dapp-runtime=none` does not emit
-  `libghostty.a` without triggering the xcframework graph anyway. Use the native emit; don't
-  reintroduce the manual assembly.
+  cross-compiles both macOS arches and assembles the universal libghostty. The earlier hand-rolled
+  path (per-arch `libghostty.a` via `-Dapp-runtime=none` + `lipo`) **fails**: on Darwin,
+  `-Dapp-runtime=none` does not emit `libghostty.a` without triggering the xcframework graph anyway.
+  Use the native emit; don't reintroduce per-arch assembly. (We *do* run one
+  `xcodebuild -create-xcframework` afterward — but only to *repackage*, see next point.)
+- **Repackage macOS-only, library renamed `libghostty.a` (bytes untouched).** Ghostty's native
+  xcframework ships the macOS archive as **`ghostty-internal.a`** (renamed from `libghostty.a` since
+  v1.3.1) and bundles **iOS slices** warden never uses (~130MB). warden's `build.rs` does
+  `link-lib=static=ghostty` → it needs a file literally named `libghostty.a` (the `lib` prefix is not
+  optional), macOS only. So after Ghostty builds, the script extracts the macOS-universal archive,
+  names it `libghostty.a`, and rebuilds a macOS-only xcframework around it. This renames/prunes the
+  *wrapper* only — the compiled libghostty bytes are exactly upstream's, so the "unmodified upstream"
+  claim holds. The script finds the `.a` by glob (not by the `ghostty-internal.a` name) so a future
+  upstream rename doesn't break it.
 - **Build on `macos-15`, not `macos-26`.** Ghostty pins **Zig 0.15.2**, which could not link a
   macOS 26 SDK. Sequoia's 15.x SDK links cleanly. The runner-OS choice *is* the unblock — the whole
   reason a local build failed but CI works. If you must move runners, that SDK-link constraint is why

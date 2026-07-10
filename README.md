@@ -37,8 +37,11 @@ pin publishes one release tagged `ghostty-<short-sha>`; the newest is GitHub's "
    - resolves the ref → SHA and clones **unmodified** Ghostty at it,
    - runs `scripts/build-xcframework.sh`, which invokes Ghostty's **own** native xcframework build
      graph (`-Demit-xcframework`; `xcframework-target` defaults to `universal`, so one build
-     cross-compiles both arches and assembles the framework with headers) — no manual `lipo` /
-     `xcodebuild`, no patches,
+     cross-compiles both arches) — no per-arch `lipo`, no patches,
+   - **repackages** Ghostty's universal macOS library into a lean, macOS-only xcframework with the
+     archive named `libghostty.a` (Ghostty now ships it as `ghostty-internal.a`, and its native
+     xcframework also bundles unused iOS slices; warden's `build.rs` links a macOS-only `libghostty.a`).
+     The compiled bytes are untouched — only the wrapper filename and slice set change,
    - zips, checksums, attests, and publishes the release.
 
 **Runner choice is load-bearing.** Ghostty pins Zig 0.15.2, which could not link a **macOS 26** SDK
