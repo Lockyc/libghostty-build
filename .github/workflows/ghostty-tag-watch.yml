@@ -50,6 +50,8 @@ jobs:
             "" \
             "Security fixes ride tags — if the release notes mention a CVE/security fix, treat this as urgent." \
             "" \
+            "cc @Lockyc" \
+            "" \
             "_Filed automatically by \`.github/workflows/ghostty-tag-watch.yml\`._" > /tmp/issue-body.md
 
           gh issue create \
