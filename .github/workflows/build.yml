@@ -78,16 +78,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="ghostty-${{ steps.r.outputs.short }}"
+          # No apostrophes in NOTES: the heredoc sits inside $( ), where bash still parses the body
+          # for quotes, so a lone ' fails the whole step with "unexpected EOF while looking for `''".
           NOTES=$(cat <<EOF
           Two assets, both built from **unmodified** upstream Ghostty via its own
           \`-Demit-xcframework\` build graph:
 
           - **\`GhosttyKit.xcframework.zip\`** — universal macOS (arm64 + x86_64) static libghostty.
           - **\`GhosttyResources.zip\`** — the runtime resources (\`terminfo/\` + \`ghostty/shell-integration/\`),
-            unpacked into an embedder's \`Contents/Resources\`. **Required**: libghostty probes for
-            \`Contents/Resources/terminfo/78/xterm-ghostty\` and silently falls back to
-            \`TERM=xterm-256color\` without it, which costs synchronized output (DEC 2026), styled
-            underlines, and shell integration.
+            unpacked straight into the \`Contents/Resources\` of an embedding app bundle.
+            **Required**: libghostty probes for \`Contents/Resources/terminfo/78/xterm-ghostty\` and
+            silently falls back to \`TERM=xterm-256color\` without it, which costs synchronized
+            output (DEC 2026), styled underlines, and shell integration.
 
           - ref: \`${{ steps.r.outputs.ref }}\`
           - sha: \`${{ steps.r.outputs.sha }}\`
