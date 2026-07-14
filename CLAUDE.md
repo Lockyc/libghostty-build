@@ -26,10 +26,28 @@ gate, a `justfile`, a CI-lint workflow, and offsite Forgejo mirror registration 
   runs Ghostty's **own** native xcframework build, then stages the result. Applies no patches — we
   build unmodified upstream on purpose.
 - **`.github/workflows/build.yml`** — resolve ref → SHA → clone unmodified Ghostty → build → zip +
-  sha256 + attest → publish release `ghostty-<short-sha>`. Single job on `macos-15`.
+  sha256 + attest → publish release `ghostty-<short-sha>` with **two** assets (xcframework +
+  resources). Single job on `macos-15`.
 
 ## Load-bearing invariants (don't regress)
 
+- **Publish the runtime resources, not just the library — the library alone is an incomplete
+  libghostty.** `GhosttyResources.zip` (`terminfo/` + `ghostty/shell-integration/`, rooted so it
+  unpacks straight into an embedder's `Contents/Resources`) is a **required** second asset. libghostty
+  locates itself at surface spawn by climbing from its executable for the sentinel
+  `Contents/Resources/terminfo/78/xterm-ghostty` (`src/os/resourcesdir.zig`); miss it and
+  `Subprocess.init` silently falls back to `TERM=xterm-256color` (`src/termio/Exec.zig`). The terminal
+  then advertises no `Sync` capability, so tmux stops bracketing its redraws in DEC 2026 — which is
+  the *one* thing that makes libghostty pause rendering — so it renders half-drawn frames, and an
+  unfocused surface (which draws its hollow cursor on **every** frame, bypassing the blink gate —
+  `src/renderer/cursor.zig`) flickers that cursor at whatever mid-repaint position it sampled. That
+  was warden's "cursor flashes around the screen when the window isn't focused" bug. We don't *build*
+  these: Ghostty's xcframework graph **always installs resources** (build.zig — its Xcode project
+  references them), so they already sit in `zig-out/share`; the script only collects them. The staging
+  step hard-fails when the sentinel is missing, precisely because the runtime failure is silent.
+- **Ship `terminfo` + `shell-integration` only — themes/docs are deliberately excluded.** Both are
+  gated off by default (`emit_themes`/`emit_docs`) and warden exposes no ghostty theme config, so
+  they'd be dead weight in every clone that vendors this. Don't add `-Demit-themes` to "be complete".
 - **Let Ghostty *compile* its own xcframework — don't hand-assemble the library.** The build calls
   `zig build -Demit-xcframework=true` (with `-Dxcframework-target=universal`, the default), which
   cross-compiles both macOS arches and assembles the universal libghostty. The earlier hand-rolled

@@ -79,3 +79,39 @@ rm -rf "$STAGE"
 
 echo "[*] repackaged slices: $(ls "$OUT/GhosttyKit.xcframework" | grep -v Info.plist | tr '\n' ' ')"
 echo "[*] library: $(ls "$OUT/GhosttyKit.xcframework"/macos-*/*.a)"
+
+# --- Ghostty resources (terminfo + shell-integration) -------------------------
+#
+# libghostty REQUIRES these at runtime to identify itself as ghostty. It climbs
+# from the running executable looking for the sentinel
+# `Contents/Resources/terminfo/78/xterm-ghostty`; without it, `resourcesDir()`
+# returns null and Subprocess.init falls back to `TERM=xterm-256color` (it even
+# logs "ghostty terminfo not found, using xterm-256color"). That fallback is not
+# cosmetic: xterm-256color has no `Sync` capability, so tmux never wraps its
+# redraws in DEC mode 2026, libghostty renders half-drawn frames, and an
+# unfocused surface paints its hollow cursor at whatever mid-repaint position it
+# sampled. A host app must ship these to be a correct libghostty embedder.
+#
+# Ghostty's own xcframework graph already installs them ("the xcframework build
+# always installs resources", build.zig) — we only collect them. Themes/docs are
+# NOT emitted (emit_themes/emit_docs default off) and warden exposes no ghostty
+# theme config, so the payload is just the two dirs the runtime actually reads.
+RES="$OUT/GhosttyResources"
+rm -rf "$RES"
+mkdir -p "$RES"
+
+SHARE="$SRC/zig-out/share"
+[ -d "$SHARE/terminfo" ] || { echo "[!] $SHARE/terminfo missing — did the resources install step run?"; ls -la "$SHARE" 2>/dev/null; exit 1; }
+[ -d "$SHARE/ghostty/shell-integration" ] || { echo "[!] $SHARE/ghostty/shell-integration missing"; ls -la "$SHARE/ghostty" 2>/dev/null; exit 1; }
+
+# -R preserves the symlinks tic writes into the terminfo db.
+cp -R "$SHARE/terminfo" "$RES/terminfo"
+mkdir -p "$RES/ghostty"
+cp -R "$SHARE/ghostty/shell-integration" "$RES/ghostty/shell-integration"
+
+# The sentinel libghostty actually probes for. If this is absent the whole
+# exercise is pointless (silent TERM fallback), so fail the build, not the app.
+[ -e "$RES/terminfo/78/xterm-ghostty" ] || { echo "[!] terminfo sentinel 78/xterm-ghostty missing — tic did not compile the entry"; find "$RES/terminfo" | head; exit 1; }
+
+echo "[*] resources: $(find "$RES" -type f -o -type l | wc -l | tr -d ' ') files, $(du -sh "$RES" | cut -f1)"
+echo "[*] terminfo entries: $(find "$RES/terminfo" -mindepth 2 -exec basename {} \; | sort -u | tr '\n' ' ')"

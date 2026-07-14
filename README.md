@@ -25,9 +25,23 @@ asset.
 
 ## What it produces
 
-A universal (arm64 + x86_64) macOS `GhosttyKit.xcframework` (slice `macos-arm64_x86_64`, matching what
-warden's `build.rs` links), zipped, with a `.sha256` and a build-provenance attestation. Each Ghostty
-pin publishes one release tagged `ghostty-<short-sha>`; the newest is GitHub's "latest".
+Each Ghostty pin publishes one release tagged `ghostty-<short-sha>` (the newest is GitHub's "latest"),
+carrying **two** assets — each zipped, with a `.sha256` and a build-provenance attestation:
+
+- **`GhosttyKit.xcframework.zip`** — the universal (arm64 + x86_64) macOS `GhosttyKit.xcframework`
+  (slice `macos-arm64_x86_64`, matching what warden's `build.rs` links).
+- **`GhosttyResources.zip`** — libghostty's **runtime resources**: `terminfo/` (tic-compiled) plus
+  `ghostty/shell-integration/`, laid out to unpack straight into an embedder's `Contents/Resources`.
+
+**The resources aren't decoration — an embedder that ships only the library is a broken libghostty
+host.** At surface spawn libghostty climbs from its executable looking for the sentinel
+`Contents/Resources/terminfo/78/xterm-ghostty`; absent that, it exports **`TERM=xterm-256color`**
+rather than `xterm-ghostty` (logging *"ghostty terminfo not found, using xterm-256color"*). Every
+program in the terminal then believes it's talking to a plain xterm and loses **synchronized output
+(DEC 2026)**, styled/coloured underlines, and shell integration. Synchronized output is the sharp
+edge: without it tmux never brackets its redraws, so libghostty renders half-drawn frames — and an
+unfocused surface, which paints its hollow cursor on *every* frame, flickers that cursor at whatever
+mid-repaint position it happened to sample.
 
 ## How the build works
 
@@ -42,6 +56,8 @@ pin publishes one release tagged `ghostty-<short-sha>`; the newest is GitHub's "
      archive named `libghostty.a` (Ghostty now ships it as `ghostty-internal.a`, and its native
      xcframework also bundles unused iOS slices; warden's `build.rs` links a macOS-only `libghostty.a`).
      The compiled bytes are untouched — only the wrapper filename and slice set change,
+   - **collects the runtime resources** Ghostty's own xcframework graph already installs into
+     `zig-out/share` (its build always installs them, since Ghostty's Xcode project references them),
    - zips, checksums, attests, and publishes the release.
 
 **Runner choice is load-bearing.** Ghostty pins Zig 0.15.2, which could not link a **macOS 26** SDK
@@ -55,8 +71,9 @@ Edit `GHOSTTY_REF` to a newer commit/tag, commit, and run the workflow (Actions 
 
 ## Consuming it (warden)
 
-warden pulls the latest release asset into `crates/warden-app/vendor/` via `just revendor-ghostty`,
-verifying the `.sha256`. See warden's `vendor/PROVENANCE.md`.
+warden pulls **both** latest-release assets into `crates/warden-app/vendor/` via
+`just revendor-ghostty`, verifying each `.sha256`: the xcframework it links, and the resources it
+bundles into `warden.app/Contents/Resources`. See warden's `vendor/PROVENANCE.md`.
 
 ## Licensing
 
