@@ -1,0 +1,10 @@
+name    = "libghostty-build"
+summary = "CI that builds Ghostty's embedding library from a pinned, unmodified upstream commit and publishes it as a release asset — build tooling, no library source of its own"
+kind    = "tool"
+status  = "active"
+tags    = ["ci", "build-tooling", "ghostty", "libghostty", "macos"]
+stack   = ["zig", "github-actions", "bash"]
+
+[[provides]]
+name    = "libghostty-artifacts"
+summary = "Per-pin releases tagged ghostty-<short-sha>, each carrying the universal (arm64 + x86_64) GhosttyKit.xcframework and GhosttyResources (tic-compiled terminfo + shell-integration), zipped with .sha256 and GitHub build-provenance attestation. Upstream publishes no full embedding framework, so an embedder must build it; pinning the commit lets a consumer track Ghostty on its own schedule and link a binary from known, unmodified upstream."
