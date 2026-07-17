@@ -13,10 +13,14 @@ warden is macOS-first, so macOS is the only target now.
 
 ## Current state
 
-Minimal by design (baseline deferred): `GHOSTTY_REF`, `scripts/build-xcframework.sh`, the build
-workflow, README, this file. **Not yet added** (follow-ups): `catalog.toml`, a docaudit pre-push
-gate, a `justfile`, a CI-lint workflow, and offsite Forgejo mirror registration — add via the
-`project-standards` skill once the pipeline is proven green.
+Minimal by design: `GHOSTTY_REF`, `scripts/build-xcframework.sh`, the two workflows, the
+`mycelium.toml` sidecar, README, this file. **Not yet added** (follow-ups): a docgraph pre-push
+gate, a `justfile`, and a CI-lint workflow — add via the `project-standards` skill.
+
+The last two have little to bite on here, and that's the point of the deferral rather than an
+oversight: nothing in this repo builds locally (Zig 0.15.2 cannot link the macOS 26 SDK — see the
+`macos-15` invariant below), so the build is CI-only by necessity and there is no local recipe for
+a `justfile` to wrap.
 
 ## Layout
 
@@ -27,7 +31,18 @@ gate, a `justfile`, a CI-lint workflow, and offsite Forgejo mirror registration 
   build unmodified upstream on purpose.
 - **`.github/workflows/build.yml`** — resolve ref → SHA → clone unmodified Ghostty → build → zip +
   sha256 + attest → publish release `ghostty-<short-sha>` with **two** assets (xcframework +
-  resources). Single job on `macos-15`.
+  resources). Single job on `macos-15`. Manual (`workflow_dispatch`) — bumping `GHOSTTY_REF` and
+  re-running *is* the release.
+- **`.github/workflows/ghostty-tag-watch.yml`** — weekly (Mondays 14:00 UTC) + dispatchable. Opens
+  an issue when upstream publishes a new stable **tag**, so a `GHOSTTY_REF` bump onto a vetted
+  release gets considered. It watches tags, not releases: Ghostty ships stable versions as git tags
+  and only the nightly "tip" is a GitHub Release, so `releases/latest` 404s.
+  - **It commits and pushes to `main` on its own.** After filing the issue it writes the new tag to
+    the marker and pushes as `github-actions[bot]`. A lone `chore: mark Ghostty vX as seen` commit
+    on `main` is this job, not stray drift — don't revert it as unexplained.
+- **`.github/ghostty-latest-seen`** — the watcher's entire state: the last upstream stable tag it
+  filed an issue for. Committed on purpose, and what makes the watch one-issue-per-tag rather than
+  one-per-run. Editing it by hand re-arms (or suppresses) the next notification.
 
 ## Load-bearing invariants (don't regress)
 
