@@ -12,3 +12,7 @@ zig-out/
 
 # Agent worktrees (house convention)
 .claude/worktrees/
+
+# Ephemeral spec/plan/brainstorm scratch — kept on disk, never tracked
+docs/superpowers/
+.superpowers/
