@@ -5,6 +5,14 @@ status  = "active"
 tags    = ["ci", "build-tooling", "ghostty", "libghostty", "macos"]
 stack   = ["zig", "github-actions", "bash"]
 
+# This repo lives in the ecosystem graph but is a vendored Ghostty build/artifacts
+# bundle, not a house project — the house baseline (README badge, docgraph pre-push,
+# justfile, roadmap) and push/PR CI don't apply. Its CI builds artifacts on a pin,
+# it isn't push-tested. So `fleet.sh audit` exempts these axes rather than red them.
+[fleet]
+exempt      = ["readme", "hookhost", "hookspath", "justfile", "ci", "roadmap"]
+exempt_note = "vendored ghostty artifacts bundle, not a house project"
+
 [[provides]]
 name    = "libghostty-artifacts"
 summary = "Per-pin releases tagged ghostty-<short-sha>, each carrying the universal (arm64 + x86_64) GhosttyKit.xcframework and GhosttyResources (tic-compiled terminfo + shell-integration), zipped with .sha256 and GitHub build-provenance attestation. Upstream publishes no full embedding framework, so an embedder must build it; pinning the commit lets a consumer track Ghostty on its own schedule and link a binary from known, unmodified upstream."
