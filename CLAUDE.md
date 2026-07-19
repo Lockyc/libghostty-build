@@ -1,3 +1,10 @@
+---
+type: architecture
+links:
+  - rel: see-also
+    to: README.md
+---
+
 # libghostty-build — agent orientation
 
 ## What this repo is
