@@ -47,6 +47,10 @@ a `justfile` to wrap.
   - **It commits and pushes to `main` on its own.** After filing the issue it writes the new tag to
     the marker and pushes as `github-actions[bot]`. A lone `chore: mark Ghostty vX as seen` commit
     on `main` is this job, not stray drift — don't revert it as unexplained.
+  - **Its first step re-enables itself via the Actions API** (`actions: write`). GitHub disables a
+    scheduled workflow after 60 days without repo activity, and a successful run with no new tag
+    commits nothing — so without the keepalive the watch goes silent in a quiet stretch. Don't drop
+    the step or move it after the check.
 - **`.github/ghostty-latest-seen`** — the watcher's entire state: the last upstream stable tag it
   filed an issue for. Committed on purpose, and what makes the watch one-issue-per-tag rather than
   one-per-run. Editing it by hand re-arms (or suppresses) the next notification.

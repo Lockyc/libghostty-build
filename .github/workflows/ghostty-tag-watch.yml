@@ -13,6 +13,7 @@ on:
 permissions:
   contents: write # update the seen-marker
   issues: write # open the notification issue
+  actions: write # keepalive: re-enable this workflow
 
 concurrency:
   group: ghostty-tag-watch
@@ -21,6 +22,13 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      # GitHub disables a scheduled workflow after 60 days without repo activity, and this
+      # repo is quiet by design. Re-enabling via the API resets that clock; it runs first so a
+      # failing check below can't skip it.
+      - name: Keepalive
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/ghostty-tag-watch.yml/enable"
       - uses: actions/checkout@v4
       - name: Check for a new Ghostty stable tag
         env:
@@ -45,7 +53,7 @@ jobs:
             "warden pins a Ghostty commit via \`GHOSTTY_REF\`. To move onto this vetted, API-stable release:" \
             "" \
             "1. Set \`GHOSTTY_REF\` to \`$latest\` in this repo, commit, run the **Build GhosttyKit** workflow." \
-            "2. In warden: \`just revendor-ghostty\`, then diff \`Headers/ghostty.h\` against \`crates/warden-app/src/ffi/mod.rs\` — the embedding C API is unstable; the \`size_of\` guards fail the build on struct-size drift, but the action-tag enum discriminants are not guarded, so eyeball those." \
+            "2. In warden: \`just revendor-ghostty\`, then diff \`Headers/ghostty.h\` against \`crates/warden-app/src/ffi/mod.rs\` — the embedding C API is unstable; the \`size_of\` guards fail the build on struct-size drift and the action-tag discriminants are generated from the header, but other positionally-transcribed enums are not guarded, so eyeball those." \
             "3. Build + run warden to verify terminals, update \`vendor/PROVENANCE.md\`, commit." \
             "" \
             "Security fixes ride tags — if the release notes mention a CVE/security fix, treat this as urgent." \
