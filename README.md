@@ -45,7 +45,7 @@ mid-repaint position it happened to sample.
 
 ## How the build works
 
-1. **`GHOSTTY_REF`** — the single source of truth: the exact Ghostty commit SHA to build.
+1. **`GHOSTTY_REF`** — the single source of truth: the Ghostty ref (tag or SHA) to build.
 2. **`.github/workflows/build.yml`** (manual `workflow_dispatch`; optional ref override) on
    **`macos-15`** with **Zig 0.15.2**:
    - resolves the ref → SHA and clones **unmodified** Ghostty at it,
@@ -53,21 +53,22 @@ mid-repaint position it happened to sample.
      graph (`-Demit-xcframework`; `xcframework-target` defaults to `universal`, so one build
      cross-compiles both arches) — no per-arch `lipo`, no patches,
    - **repackages** Ghostty's universal macOS library into a lean, macOS-only xcframework with the
-     archive named `libghostty.a` (Ghostty now ships it as `ghostty-internal.a`, and its native
+     archive named `libghostty.a` (Ghostty ships it as `ghostty-internal.a`, and its native
      xcframework also bundles unused iOS slices; warden's `build.rs` links a macOS-only `libghostty.a`).
      The compiled bytes are untouched — only the wrapper filename and slice set change,
    - **collects the runtime resources** Ghostty's own xcframework graph already installs into
      `zig-out/share` (its build always installs them, since Ghostty's Xcode project references them),
    - zips, checksums, attests, and publishes the release.
 
-**Runner choice is load-bearing.** Ghostty pins Zig 0.15.2, which could not link a **macOS 26** SDK
-locally — so the build runs on `macos-15` (Sequoia), whose 15.x SDK Zig 0.15.2 links cleanly. That
-runner-OS choice is the whole reason a local build was blocked but CI isn't.
+**Runner choice is load-bearing.** Ghostty pins Zig 0.15.2, which links only the 15.x SDK, not a
+**macOS 26** one — so the build runs on `macos-15` (Sequoia), not on a macOS 26 machine.
 
 ## Bumping the Ghostty version
 
 Edit `GHOSTTY_REF` to a newer commit/tag, commit, and run the workflow (Actions ▸ *Build GhosttyKit*
 ▸ *Run workflow*). To test a ref without changing the pin, pass it as the `ghostty_ref` input.
+`.github/workflows/ghostty-tag-watch.yml` checks weekly and opens a `ghostty-update` issue when
+Ghostty tags a new stable release.
 
 ## Consuming it (warden)
 
@@ -77,6 +78,6 @@ bundles into `warden.app/Contents/Resources`. See warden's `vendor/PROVENANCE.md
 
 ## Licensing
 
-The build scripts and workflow here are MIT (`LICENSE`). The **published `GhosttyKit.xcframework`
-contains compiled Ghostty**, which is MIT-licensed by upstream; its notice travels with the binary
-(`LICENSE-ghostty`). This repo redistributes Ghostty's compiled bytes under that license.
+The build scripts and workflow here are MIT (`LICENSE`). The **published assets contain compiled
+Ghostty and its runtime resources**, MIT-licensed by upstream; its notice travels with the binary
+(`LICENSE-ghostty`). This repo redistributes those files under that license.
