@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-15    # NOT macos-26: Zig 0.15.2 links the 15.x SDK, not the 26 SDK
+    runs-on: macos-15    # the SDK this build is verified on
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Clone Ghostty @ pinned sha
         run: |
