@@ -25,9 +25,8 @@ Minimal by design: `GHOSTTY_REF`, `scripts/build-xcframework.sh`, the two workfl
 gate, a `justfile`, and a CI-lint workflow — add via the `project-standards` skill.
 
 The last two have little to bite on here, and that's the point of the deferral rather than an
-oversight: nothing in this repo builds locally (Zig 0.15.2 cannot link the macOS 26 SDK — see the
-`macos-15` invariant below), so the build is CI-only by necessity and there is no local recipe for
-a `justfile` to wrap.
+oversight: the build is CI-only (see the `macos-15` invariant below), so there is no local recipe
+for a `justfile` to wrap.
 
 ## Layout
 
@@ -95,12 +94,13 @@ a `justfile` to wrap.
   so static linking is unaffected. Without this the vendored binary is 7× larger for no benefit —
   warden never debugs into libghostty. Don't drop the strip to "keep symbols"; reproduce a
   symbolicated build from the pinned commit if ever needed.
-- **Build on `macos-15`, not `macos-26`.** Ghostty pins **Zig 0.15.2**, which could not link a
-  macOS 26 SDK. Sequoia's 15.x SDK links cleanly. The runner-OS choice *is* the unblock — the whole
-  reason a local build failed but CI works. If you must move runners, that SDK-link constraint is why
-  this one was chosen.
-- **Zig is pinned to 0.15.2.** Ghostty's `build.zig.zon` `minimum_zig_version` is 0.15.2; Homebrew's
-  0.16.0 won't build it. Keep `setup-zig` on 0.15.2, bumping only when upstream Ghostty does.
+- **Build on `macos-15`.** Sequoia's 15.x SDK is the one this build is verified against; Zig 0.15.2
+  could not link the macOS 26 SDK. Whether 0.16.0 can is untried here. Upstream's own macOS CI runs
+  on Tahoe, so a `macos-26` run (or a local build on this macOS 26 machine) is the test that would
+  lift the CI-only constraint.
+- **`setup-zig` tracks Ghostty's `minimum_zig_version`** (`build.zig.zon` at the pinned SHA). Zig
+  is not backward-compatible across minors, so a `GHOSTTY_REF` bump that crosses an upstream Zig
+  bump changes both in the same commit.
 - **Universal (arm64 + x86_64) slice.** warden's `build.rs` hard-codes the slice path
   `macos-arm64_x86_64`. The default `xcframework-target=universal` produces exactly that; a `native`
   build would produce `macos-arm64` and break warden's link path. warden runs aarch64 only, but the

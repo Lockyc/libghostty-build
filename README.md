@@ -47,7 +47,7 @@ mid-repaint position it happened to sample.
 
 1. **`GHOSTTY_REF`** — the single source of truth: the Ghostty ref (tag or SHA) to build.
 2. **`.github/workflows/build.yml`** (manual `workflow_dispatch`; optional ref override) on
-   **`macos-15`** with **Zig 0.15.2**:
+   **`macos-15`** with the Zig version Ghostty's `build.zig.zon` requires at that SHA:
    - resolves the ref → SHA and clones **unmodified** Ghostty at it,
    - runs `scripts/build-xcframework.sh`, which invokes Ghostty's **own** native xcframework build
      graph (`-Demit-xcframework`; `xcframework-target` defaults to `universal`, so one build
@@ -60,8 +60,8 @@ mid-repaint position it happened to sample.
      `zig-out/share` (its build always installs them, since Ghostty's Xcode project references them),
    - zips, checksums, attests, and publishes the release.
 
-**Runner choice is load-bearing.** Ghostty pins Zig 0.15.2, which links only the 15.x SDK, not a
-**macOS 26** one — so the build runs on `macos-15` (Sequoia), not on a macOS 26 machine.
+**Runner choice is load-bearing.** The build is verified against Sequoia's 15.x SDK, so it runs on
+`macos-15`. (Zig 0.15.2 could not link the macOS 26 SDK; 0.16.0 is untried there.)
 
 ## Bumping the Ghostty version
 
