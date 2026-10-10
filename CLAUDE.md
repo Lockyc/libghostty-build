@@ -30,8 +30,9 @@ for a `justfile` to wrap.
 
 ## Layout
 
-- **`GHOSTTY_REF`** — single source of truth: the exact Ghostty commit SHA to build. Bumping the
-  Ghostty version = edit this file + re-run the workflow. Never hard-code the SHA anywhere else.
+- **`GHOSTTY_REF`** — single source of truth: the Ghostty ref to build (a stable tag or a commit
+  SHA). The workflow resolves it to a SHA, and the release is tagged by the resolved short SHA.
+  Bumping Ghostty = edit this file + re-run the workflow. Never hard-code the ref anywhere else.
 - **`scripts/build-xcframework.sh`** — clones nothing; takes a Ghostty source tree + output dir and
   runs Ghostty's **own** native xcframework build, then stages the result. Applies no patches — we
   build unmodified upstream on purpose.
