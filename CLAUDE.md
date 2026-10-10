@@ -21,12 +21,10 @@ warden is macOS-first, so macOS is the only target now.
 ## Current state
 
 Minimal by design: `GHOSTTY_REF`, `scripts/build-xcframework.sh`, the two workflows, the
-`mycelium.toml` sidecar, README, this file. **Not yet added** (follow-ups): a docgraph pre-push
-gate, a `justfile`, and a CI-lint workflow — add via the `project-standards` skill.
-
-The last two have little to bite on here, and that's the point of the deferral rather than an
-oversight: the build is CI-only (see the `macos-15` invariant below), so there is no local recipe
-for a `justfile` to wrap.
+`mycelium.toml` sidecar, README, this file, and the docgraph pre-push gate (`.githooks/pre-push`;
+`git config core.hooksPath .githooks` wires it per clone). A `justfile` and a CI-lint workflow are
+deliberately absent, and exempt in the sidecar: the build is CI-only (see the `macos-15` invariant
+below), so there is no local recipe to wrap.
 
 ## Layout
 

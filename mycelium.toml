@@ -5,13 +5,13 @@ status  = "active"
 tags    = ["ci", "build-tooling", "ghostty", "libghostty", "macos"]
 stack   = ["zig", "github-actions", "bash"]
 
-# This repo lives in the ecosystem graph but is a vendored Ghostty build/artifacts
-# bundle, not a house project — the house baseline (README badge, docgraph pre-push,
-# justfile, roadmap) and push/PR CI don't apply. Its CI builds artifacts on a pin,
-# it isn't push-tested. So `fleet.sh audit` exempts these axes rather than red them.
+# CI-only build tooling: it vendors nothing (warden vendors from its releases), and its
+# build runs only in CI, on a pin. So the house baseline axes that assume a local build or
+# a house project surface (README badge, justfile, roadmap, push/PR CI) don't apply, and
+# `fleet.sh audit` exempts them rather than red them. The docgraph pre-push gate applies.
 [fleet]
-exempt      = ["readme", "hookhost", "hookspath", "justfile", "ci", "roadmap"]
-exempt_note = "vendored ghostty artifacts bundle, not a house project"
+exempt      = ["readme", "justfile", "ci", "roadmap"]
+exempt_note = "CI-only build tooling; no local build to wrap"
 
 [[provides]]
 name    = "libghostty-artifacts"
