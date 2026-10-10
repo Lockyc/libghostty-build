@@ -28,7 +28,7 @@ jobs:
     env:
       ZIG_VERSION: 0.16.0  # Ghostty's minimum_zig_version at the pinned SHA
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Resolve Ghostty ref
         id: r
@@ -69,7 +69,7 @@ jobs:
           shasum -a 256 GhosttyResources.zip | tee GhosttyResources.zip.sha256
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             dist/GhosttyKit.xcframework.zip
