@@ -25,6 +25,8 @@ jobs:
   build:
     runs-on: macos-15    # the SDK this build is verified on
     timeout-minutes: 90
+    env:
+      ZIG_VERSION: 0.16.0  # Ghostty's minimum_zig_version at the pinned SHA
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +47,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: ${{ env.ZIG_VERSION }}
 
       - name: Clone Ghostty @ pinned sha
         run: |
@@ -94,7 +96,7 @@ jobs:
           - ref: \`${{ steps.r.outputs.ref }}\`
           - sha: \`${{ steps.r.outputs.sha }}\`
 
-          Zig 0.15.2, \`macos-15\` runner. Consumed by [warden](https://github.com/lockyc/warden)
+          Zig ${ZIG_VERSION}, \`macos-15\` runner. Consumed by [warden](https://github.com/lockyc/warden)
           via \`just revendor-ghostty\`. Verify with the attached \`.sha256\` files and the GitHub
           build provenance attestation.
           EOF

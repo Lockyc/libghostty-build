@@ -98,7 +98,7 @@ for a `justfile` to wrap.
   could not link the macOS 26 SDK. Whether 0.16.0 can is untried here. Upstream's own macOS CI runs
   on Tahoe, so a `macos-26` run (or a local build on this macOS 26 machine) is the test that would
   lift the CI-only constraint.
-- **`setup-zig` tracks Ghostty's `minimum_zig_version`** (`build.zig.zon` at the pinned SHA). Zig
+- **`ZIG_VERSION` (build.yml) tracks Ghostty's `minimum_zig_version`** (`build.zig.zon` at the pinned SHA). Zig
   is not backward-compatible across minors, so a `GHOSTTY_REF` bump that crosses an upstream Zig
   bump changes both in the same commit.
 - **Universal (arm64 + x86_64) slice.** warden's `build.rs` hard-codes the slice path
