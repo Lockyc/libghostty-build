@@ -1,6 +1,6 @@
 name    = "libghostty-build"
 summary = "CI that builds Ghostty's embedding library from a pinned, unmodified upstream commit and publishes it as a release asset — build tooling, no library source of its own"
-kind    = "tool"
+kind    = "library"
 status  = "active"
 tags    = ["ci", "build-tooling", "ghostty", "libghostty", "macos"]
 stack   = ["zig", "github-actions", "bash"]
