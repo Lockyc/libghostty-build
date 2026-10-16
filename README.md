@@ -27,14 +27,15 @@ and a flickering cursor in unfocused panes.
 
 ## How the build works
 
-1. **`GHOSTTY_REF`** — the single source of truth: the Ghostty ref (tag or SHA) to build.
+1. **`GHOSTTY_REF`** (a one-line file at the repo root) — the Ghostty ref (tag or SHA) to build.
 2. **`.github/workflows/build.yml`** (manual `workflow_dispatch`; optional ref override) on
    **`macos-15`** with the Zig version Ghostty's `build.zig.zon` requires at that SHA:
    - resolves the ref → SHA and clones **unmodified** Ghostty at it,
-   - runs `scripts/build-xcframework.sh`, which invokes Ghostty's own universal xcframework build
+   - runs `scripts/build-xcframework.sh`, which invokes Ghostty's own xcframework build
      (`-Demit-xcframework`), unpatched,
-   - repackages the universal macOS library as a macOS-only xcframework with the archive named
-     `libghostty.a` (the compiled library is unchanged),
+   - takes the universal (arm64 + x86_64) macOS library out of it and repackages it as a
+     macOS-only xcframework with the archive named `libghostty.a` (the compiled library is
+     unchanged),
    - collects the runtime resources from `zig-out/share`,
    - zips, checksums, attests, and publishes the release.
 
@@ -47,9 +48,9 @@ Ghostty tags a new stable release.
 
 ## Consuming it (warden)
 
-warden pulls **both** latest-release assets into `crates/warden-app/vendor/` via
-`just revendor-ghostty`, verifying each `.sha256`: the xcframework it links, and the resources it
-bundles into `warden.app/Contents/Resources`. See warden's `vendor/PROVENANCE.md`.
+warden pulls **both** latest-release assets (the xcframework it links, and the resources it
+bundles into `warden.app/Contents/Resources`) into `crates/warden-app/vendor/` via
+`just revendor-ghostty`, checking each against its `.sha256`. See warden's `vendor/PROVENANCE.md`.
 
 ## Licensing
 
