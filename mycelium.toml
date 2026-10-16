@@ -7,10 +7,10 @@ stack   = ["zig", "github-actions", "bash"]
 
 # CI-only build tooling: it vendors nothing (warden vendors from its releases), and its
 # build runs only in CI, on a pin. So the house baseline axes that assume a local build or
-# a house project surface (README badge, justfile, roadmap, push/PR CI) don't apply, and
+# a house project surface (README badge, justfile, roadmap) don't apply, and
 # `fleet.sh audit` exempts them rather than red them. The docgraph pre-push gate applies.
 [fleet]
-exempt      = ["readme", "justfile", "ci", "roadmap"]
+exempt      = ["readme", "justfile", "roadmap"]
 exempt_note = "CI-only build tooling; no local build to wrap"
 
 [[provides]]
