@@ -45,14 +45,17 @@ jobs:
           echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
           echo "[*] $REF -> $SHA"
 
-      - uses: mlugg/setup-zig@v2
+      # Pinned by commit: a retargeted tag would run with release-write and attestation rights.
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: ${{ env.ZIG_VERSION }}
 
       - name: Clone Ghostty @ pinned sha
+        env:
+          SHA: ${{ steps.r.outputs.sha }}
         run: |
           git clone --filter=blob:none https://github.com/ghostty-org/ghostty ghostty-src
-          git -C ghostty-src checkout --detach "${{ steps.r.outputs.sha }}"
+          git -C ghostty-src checkout --detach "$SHA"
 
       - name: Build GhosttyKit.xcframework (universal)
         run: ./scripts/build-xcframework.sh "$PWD/ghostty-src" "$PWD/dist"
@@ -78,8 +81,17 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Passed through env, never ${{ }}-expanded into the script: the ref is free text from the
+          # dispatch input, and expanded it would run as shell.
+          REF: ${{ steps.r.outputs.ref }}
+          SHA: ${{ steps.r.outputs.sha }}
+          SHORT: ${{ steps.r.outputs.short }}
+          IS_OVERRIDE: ${{ github.event.inputs.ghostty_ref != '' }}
         run: |
-          TAG="ghostty-${{ steps.r.outputs.short }}"
+          TAG="ghostty-$SHORT"
+          # warden vendors the latest release: a pinned build becomes latest (including a rollback
+          # to a pin whose release already exists); an override test build is a prerelease, never latest.
+          if [ "$IS_OVERRIDE" = true ]; then CHANNEL=--prerelease; else CHANNEL=--latest; fi
           # No apostrophes in NOTES: the heredoc sits inside $( ), where bash still parses the body
           # for quotes, so a lone ' fails the whole step with "unexpected EOF while looking for `''".
           NOTES=$(cat <<EOF
@@ -93,8 +105,8 @@ jobs:
             silently falls back to \`TERM=xterm-256color\` without it, which costs synchronized
             output (DEC 2026), styled underlines, and shell integration.
 
-          - ref: \`${{ steps.r.outputs.ref }}\`
-          - sha: \`${{ steps.r.outputs.sha }}\`
+          - ref: \`${REF}\`
+          - sha: \`${SHA}\`
 
           Zig ${ZIG_VERSION}, \`macos-15\` runner. Consumed by [warden](https://github.com/lockyc/warden)
           via \`just revendor-ghostty\`. Verify with the attached \`.sha256\` files and the GitHub
@@ -106,5 +118,6 @@ jobs:
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "$NOTES" \
+            "$CHANNEL" \
             $ASSETS \
-            || { gh release upload "$TAG" $ASSETS --clobber; gh release edit "$TAG" --notes "$NOTES"; }
+            || { gh release upload "$TAG" $ASSETS --clobber; gh release edit "$TAG" --notes "$NOTES" "$CHANNEL"; }

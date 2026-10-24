@@ -42,7 +42,8 @@ and a flickering cursor in unfocused panes.
 ## Bumping the Ghostty version
 
 Edit `GHOSTTY_REF` to a newer commit/tag, commit, and run the workflow (Actions ▸ *Build GhosttyKit*
-▸ *Run workflow*). To test a ref without changing the pin, pass it as the `ghostty_ref` input.
+▸ *Run workflow*). To test a ref without changing the pin, pass it as the `ghostty_ref` input; that build
+publishes as a prerelease, so warden (which vendors the latest release) never picks it up.
 `.github/workflows/ghostty-tag-watch.yml` checks weekly and opens a `ghostty-update` issue when
 Ghostty tags a new stable release.
 
