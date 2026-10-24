@@ -94,7 +94,7 @@ below), so there is no local recipe to wrap.
   warden never debugs into libghostty. Don't drop the strip to "keep symbols"; reproduce a
   symbolicated build from the pinned commit if ever needed.
 - **Build on `macos-15`.** Sequoia's 15.x SDK is the one this build is verified against; Zig 0.15.2
-  could not link the macOS 26 SDK. Whether 0.16.0 can is untried here. Upstream's own macOS CI runs
+  could not link the macOS 26 SDK. Whether 0.17.0 can is untried here. Upstream's own macOS CI runs
   on Tahoe, so a `macos-26` run (or a local build on this macOS 26 machine) is the test that would
   lift the CI-only constraint.
 - **`ZIG_VERSION` (build.yml) tracks Ghostty's `minimum_zig_version`** (`build.zig.zon` at the pinned SHA). Zig
