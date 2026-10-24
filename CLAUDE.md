@@ -97,9 +97,9 @@ below), so there is no local recipe to wrap.
   could not link the macOS 26 SDK. Whether 0.17.0 can is untried here. Upstream's own macOS CI runs
   on Tahoe, so a `macos-26` run (or a local build on this macOS 26 machine) is the test that would
   lift the CI-only constraint.
-- **`ZIG_VERSION` (build.yml) tracks Ghostty's `minimum_zig_version`** (`build.zig.zon` at the pinned SHA). Zig
-  is not backward-compatible across minors, so a `GHOSTTY_REF` bump that crosses an upstream Zig
-  bump changes both in the same commit.
+- **The Zig version is read from Ghostty's `build.zig.zon`** (`minimum_zig_version` at the SHA being
+  built, build.yml's "Read Ghostty's minimum Zig version" step), never pinned here: Zig is not
+  backward-compatible across minors, and upstream's declaration is the one that matches its code.
 - **Universal (arm64 + x86_64) slice.** warden's `build.rs` hard-codes the slice path
   `macos-arm64_x86_64`. The default `xcframework-target=universal` produces exactly that; a `native`
   build would produce `macos-arm64` and break warden's link path. warden runs aarch64 only, but the
