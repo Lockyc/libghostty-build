@@ -12,12 +12,15 @@ framework. The repo ships no library source of its own; the deliverable is the r
 ## What it produces
 
 Each Ghostty pin publishes one release tagged `ghostty-<short-sha>` (the newest is GitHub's "latest"),
-carrying **two** assets — each zipped, with a `.sha256` and a build-provenance attestation:
+carrying **three** assets — each zipped, with a `.sha256` and a build-provenance attestation:
 
 - **`GhosttyKit.xcframework.zip`** — the universal (arm64 + x86_64) macOS `GhosttyKit.xcframework`
   (slice `macos-arm64_x86_64`).
 - **`GhosttyResources.zip`** — libghostty's **runtime resources**: `terminfo/` (tic-compiled) plus
   `ghostty/shell-integration/`, laid out to unpack straight into an embedder's `Contents/Resources`.
+- **`libghostty-vt-macos.zip`** — libghostty-vt, Ghostty's standalone VT library: a universal macOS
+  `lib/libghostty-vt.a` plus `include/ghostty/vt.h` and `vt/`, built with `-Demit-lib-vt` for
+  [warden](https://github.com/lockyc/warden)'s `warden-relay` helper.
 
 **Embedders must ship the resources.** Without `Contents/Resources/terminfo/78/xterm-ghostty`,
 libghostty sets **`TERM=xterm-256color`** instead of `xterm-ghostty` (logging *"ghostty terminfo not
@@ -47,10 +50,13 @@ publishes as a prerelease, so warden (which vendors the latest release) never pi
 `.github/workflows/ghostty-tag-watch.yml` checks weekly and opens a `ghostty-update` issue when
 Ghostty tags a new stable release.
 
+To add libghostty-vt to a release that already exists without rebuilding its other assets, run the
+workflow with `vt_only` ticked (and `ghostty_ref` set to the pinned ref).
+
 ## Consuming it (warden)
 
-warden pulls **both** latest-release assets (the xcframework it links, and the resources it
-bundles into `warden.app/Contents/Resources`) into `crates/warden-app/vendor/` via
+warden pulls all three latest-release assets (the xcframework it links, the resources it
+bundles into `warden.app/Contents/Resources`, and libghostty-vt) into `crates/warden-app/vendor/` via
 `just revendor-ghostty`, checking each against its `.sha256`. See warden's `vendor/PROVENANCE.md`.
 
 ## Licensing

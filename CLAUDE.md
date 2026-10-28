@@ -34,9 +34,13 @@ below), so there is no local recipe to wrap.
 - **`scripts/build-xcframework.sh`** — clones nothing; takes a Ghostty source tree + output dir and
   runs Ghostty's **own** native xcframework build, then stages the result. Applies no patches — we
   build unmodified upstream on purpose.
+- **`scripts/build-vt.sh`** — builds libghostty-vt (`-Demit-lib-vt=true`, which installs one target per
+  build) for aarch64 and x86_64, `lipo`s them into a universal `libghostty-vt.a`, strips debug symbols,
+  and stages it with `include/ghostty/vt.h` + `vt/`. Hard-fails if the snapshot/formatter entry points
+  warden-relay links are missing. Unpatched, like the xcframework build.
 - **`.github/workflows/build.yml`** — resolve ref → SHA → clone unmodified Ghostty → build → zip +
-  sha256 + attest → publish release `ghostty-<short-sha>` with **two** assets (xcframework +
-  resources). Single job on `macos-15`. Manual (`workflow_dispatch`) — bumping `GHOSTTY_REF` and
+  sha256 + attest → publish release `ghostty-<short-sha>` with **three** assets (xcframework +
+  resources + libghostty-vt). Single job on `macos-15`. The `vt_only` input builds just libghostty-vt and uploads it to the ref's existing release, leaving the other assets' bytes alone (a full run is not reproducible and clobbers them). Manual (`workflow_dispatch`) — bumping `GHOSTTY_REF` and
   re-running *is* the release.
 - **`.github/workflows/ghostty-tag-watch.yml`** — weekly (Mondays 14:00 UTC) + dispatchable. Opens
   an issue when upstream publishes a new stable **tag**, so a `GHOSTTY_REF` bump onto a vetted

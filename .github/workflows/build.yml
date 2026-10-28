@@ -11,6 +11,11 @@ on:
         required: false
         type: string
         default: ""
+      vt_only:
+        description: "Build and upload only libghostty-vt-macos.zip onto the EXISTING release for the ref; its other assets are not rebuilt or touched."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write        # create the release
@@ -66,9 +71,23 @@ jobs:
           version: ${{ steps.z.outputs.version }}
 
       - name: Build GhosttyKit.xcframework (universal)
+        if: ${{ !inputs.vt_only }}
         run: ./scripts/build-xcframework.sh "$PWD/ghostty-src" "$PWD/dist"
 
+      - name: Build libghostty-vt (universal)
+        run: ./scripts/build-vt.sh "$PWD/ghostty-src" "$PWD/dist"
+
+      # Rooted at lib/ + include/, so a consumer unpacks it straight into its vendor dir.
+      - name: Package + checksum libghostty-vt
+        run: |
+          set -euo pipefail
+          cd dist/libghostty-vt
+          ditto -c -k --sequesterRsrc . ../libghostty-vt-macos.zip
+          cd ..
+          shasum -a 256 libghostty-vt-macos.zip | tee libghostty-vt-macos.zip.sha256
+
       - name: Package + checksum
+        if: ${{ !inputs.vt_only }}
         run: |
           set -euo pipefail
           cd dist
@@ -83,8 +102,9 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
-            dist/GhosttyKit.xcframework.zip
-            dist/GhosttyResources.zip
+            dist/libghostty-vt-macos.zip
+            ${{ !inputs.vt_only && 'dist/GhosttyKit.xcframework.zip' || '' }}
+            ${{ !inputs.vt_only && 'dist/GhosttyResources.zip' || '' }}
 
       - name: Publish release
         env:
@@ -96,6 +116,7 @@ jobs:
           SHORT: ${{ steps.r.outputs.short }}
           ZIG_VERSION: ${{ steps.z.outputs.version }}
           IS_OVERRIDE: ${{ github.event.inputs.ghostty_ref != '' }}
+          VT_ONLY: ${{ inputs.vt_only }}
         run: |
           TAG="ghostty-$SHORT"
           # warden vendors the latest release: a pinned build becomes latest (including a rollback
@@ -104,8 +125,8 @@ jobs:
           # No apostrophes in NOTES: the heredoc sits inside $( ), where bash still parses the body
           # for quotes, so a lone ' fails the whole step with "unexpected EOF while looking for `''".
           NOTES=$(cat <<EOF
-          Two assets, both built from **unmodified** upstream Ghostty via its own
-          \`-Demit-xcframework\` build graph:
+          Three assets, all built from **unmodified** upstream Ghostty (the first two via its own
+          \`-Demit-xcframework\` build graph):
 
           - **\`GhosttyKit.xcframework.zip\`** — universal macOS (arm64 + x86_64) static libghostty.
           - **\`GhosttyResources.zip\`** — the runtime resources (\`terminfo/\` + \`ghostty/shell-integration/\`),
@@ -113,6 +134,9 @@ jobs:
             **Required**: libghostty probes for \`Contents/Resources/terminfo/78/xterm-ghostty\` and
             silently falls back to \`TERM=xterm-256color\` without it, which costs synchronized
             output (DEC 2026), styled underlines, and shell integration.
+          - **\`libghostty-vt-macos.zip\`** — libghostty-vt, the standalone VT library from Ghostty (\`-Demit-lib-vt\`):
+            universal macOS \`lib/libghostty-vt.a\` plus \`include/ghostty/vt.h\` + \`vt/\`, rooted so it
+            unpacks straight into a vendor dir.
 
           - ref: \`${REF}\`
           - sha: \`${SHA}\`
@@ -123,7 +147,15 @@ jobs:
           EOF
           )
           cd dist
-          ASSETS="GhosttyKit.xcframework.zip GhosttyKit.xcframework.zip.sha256 GhosttyResources.zip GhosttyResources.zip.sha256"
+          VT_ASSETS="libghostty-vt-macos.zip libghostty-vt-macos.zip.sha256"
+          if [ "$VT_ONLY" = true ]; then
+            # Adds to the release the ref already has; the existing assets are never rebuilt or replaced.
+            gh release view "$TAG" >/dev/null
+            gh release upload "$TAG" $VT_ASSETS --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+            exit 0
+          fi
+          ASSETS="GhosttyKit.xcframework.zip GhosttyKit.xcframework.zip.sha256 GhosttyResources.zip GhosttyResources.zip.sha256 $VT_ASSETS"
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "$NOTES" \
