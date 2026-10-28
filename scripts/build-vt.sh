@@ -47,8 +47,8 @@ cp -R "$SRC/include/ghostty/vt" "$STAGE/include/ghostty/vt"
 rm -rf "$OUT/.vt-build"
 
 # The two entry points warden-relay links; fail the build, not the consumer, if absent.
-nm -g "$STAGE/lib/libghostty-vt.a" 2>/dev/null | grep -q ' T _ghostty_snapshot_decoder_new$' \
-  || { echo "[!] ghostty_snapshot_decoder_new not defined in libghostty-vt.a"; exit 1; }
-nm -g "$STAGE/lib/libghostty-vt.a" 2>/dev/null | grep -q ' T _ghostty_formatter_terminal_new$' \
-  || { echo "[!] ghostty_formatter_terminal_new not defined in libghostty-vt.a"; exit 1; }
+# Captured, not piped into grep -q: under pipefail grep exiting early SIGPIPEs nm and fails the check.
+SYMS=$(nm -g "$STAGE/lib/libghostty-vt.a" 2>/dev/null)
+grep -q ' T _ghostty_snapshot_decoder_new$' <<<"$SYMS" || { echo "[!] ghostty_snapshot_decoder_new not defined in libghostty-vt.a"; exit 1; }
+grep -q ' T _ghostty_formatter_terminal_new$' <<<"$SYMS" || { echo "[!] ghostty_formatter_terminal_new not defined in libghostty-vt.a"; exit 1; }
 echo "[*] libghostty-vt staged: $STAGE"
