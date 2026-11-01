@@ -15,4 +15,4 @@ exempt_note = "CI-only build tooling; no local build to wrap"
 
 [[provides]]
 name    = "libghostty-artifacts"
-summary = "Per-pin releases tagged ghostty-<short-sha>, each carrying the universal (arm64 + x86_64) GhosttyKit.xcframework and GhosttyResources (tic-compiled terminfo + shell-integration), zipped with .sha256 and GitHub build-provenance attestation. Upstream publishes no full embedding framework, so an embedder must build it; pinning the commit lets a consumer track Ghostty on its own schedule and link a binary from known, unmodified upstream."
+summary = "Per-pin releases tagged ghostty-<short-sha>, each carrying the universal (arm64 + x86_64) GhosttyKit.xcframework, GhosttyResources (tic-compiled terminfo + shell-integration) and libghostty-vt-macos.zip (a universal libghostty-vt.a plus the vt.h headers), zipped with .sha256 and GitHub build-provenance attestation. Upstream publishes no full embedding framework, so an embedder must build it; pinning the commit lets a consumer track Ghostty on its own schedule and link a binary from known, unmodified upstream."

@@ -14,13 +14,14 @@ library from a pinned, **unmodified** upstream commit and publishes it as a rele
 [warden](https://github.com/lockyc/warden) vendors. It ships no library source of its own — the
 deliverable is the CI-built artifact.
 
-Today that artifact is the macOS `GhosttyKit.xcframework`. The repo name is platform-neutral
+Today that artifact is three macOS assets: `GhosttyKit.xcframework`, its runtime resources, and
+libghostty-vt (the standalone VT library). The repo name is platform-neutral
 deliberately: a future libghostty build for another platform belongs here too, not in a renamed repo.
 warden is macOS-first, so macOS is the only target now.
 
 ## Current state
 
-Minimal by design: `GHOSTTY_REF`, `scripts/build-xcframework.sh`, the two workflows, the
+Minimal by design: `GHOSTTY_REF`, `scripts/build-xcframework.sh`, `scripts/build-vt.sh`, the two workflows, the
 `mycelium.toml` sidecar, README, this file, and the docgraph pre-push gate (`.githooks/pre-push`;
 `git config core.hooksPath .githooks` wires it per clone). A `justfile` is deliberately absent and
 exempt in the sidecar, and there is no CI-lint workflow: the build is CI-only (see the `macos-15` invariant

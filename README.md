@@ -40,6 +40,8 @@ and a flickering cursor in unfocused panes.
      macOS-only xcframework with the archive named `libghostty.a` (the compiled library is
      unchanged),
    - collects the runtime resources from `zig-out/share`,
+   - runs `scripts/build-vt.sh`, which builds libghostty-vt (`-Demit-lib-vt`) for aarch64 and
+     x86_64 and `lipo`s them into one universal `libghostty-vt.a`,
    - zips, checksums, attests, and publishes the release.
 
 ## Bumping the Ghostty version
@@ -51,7 +53,7 @@ publishes as a prerelease, so warden (which vendors the latest release) never pi
 Ghostty tags a new stable release.
 
 To add libghostty-vt to a release that already exists without rebuilding its other assets, run the
-workflow with `vt_only` ticked (and `ghostty_ref` set to the pinned ref).
+workflow with `vt_only` ticked and `ghostty_ref` left empty (the pinned ref).
 
 ## Consuming it (warden)
 

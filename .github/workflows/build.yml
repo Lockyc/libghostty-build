@@ -1,8 +1,9 @@
 name: Build GhosttyKit
 
-# Builds GhosttyKit.xcframework (Ghostty's macOS embedding framework) from the
-# commit pinned in GHOSTTY_REF, and publishes it as a release asset that warden
-# vendors. Manual for now — bumping GHOSTTY_REF and re-running is the release.
+# Builds three assets from the commit pinned in GHOSTTY_REF — GhosttyKit.xcframework
+# (Ghostty's macOS embedding framework), GhosttyResources, and libghostty-vt — and
+# publishes them as the release warden vendors. Manual for now — bumping GHOSTTY_REF
+# and re-running is the release.
 on:
   workflow_dispatch:
     inputs:
@@ -22,9 +23,11 @@ permissions:
   id-token: write        # build provenance attestation
   attestations: write
 
+# Queue, never cancel: a cancel landing inside `gh release upload --clobber` leaves the
+# latest release missing assets.
 concurrency:
   group: build
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -39,10 +42,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_REF: ${{ github.event.inputs.ghostty_ref }}
         run: |
-          REF="${INPUT_REF:-$(tr -d '[:space:]' < GHOSTTY_REF)}"
+          PIN="$(tr -d '[:space:]' < GHOSTTY_REF)"
+          REF="${INPUT_REF:-$PIN}"
           [ -n "$REF" ] || { echo "[!] no ref (empty input and GHOSTTY_REF)"; exit 1; }
           SHA=$(gh api "repos/ghostty-org/ghostty/commits/$REF" --jq '.sha')
           [ -n "$SHA" ] || { echo "[!] could not resolve $REF to a commit"; exit 1; }
+          PIN_SHA=$(gh api "repos/ghostty-org/ghostty/commits/$PIN" --jq '.sha')
+          # An override is a different commit, not a non-empty input: the pin's own ref typed
+          # in must still publish as latest, not demote the pinned release to prerelease.
+          if [ "$SHA" != "$PIN_SHA" ]; then OVERRIDE=true; else OVERRIDE=false; fi
+          echo "override=$OVERRIDE" >> "$GITHUB_OUTPUT"
           echo "ref=$REF"         >> "$GITHUB_OUTPUT"
           echo "sha=$SHA"         >> "$GITHUB_OUTPUT"
           echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
@@ -115,7 +124,7 @@ jobs:
           SHA: ${{ steps.r.outputs.sha }}
           SHORT: ${{ steps.r.outputs.short }}
           ZIG_VERSION: ${{ steps.z.outputs.version }}
-          IS_OVERRIDE: ${{ github.event.inputs.ghostty_ref != '' }}
+          IS_OVERRIDE: ${{ steps.r.outputs.override }}
           VT_ONLY: ${{ inputs.vt_only }}
         run: |
           TAG="ghostty-$SHORT"
