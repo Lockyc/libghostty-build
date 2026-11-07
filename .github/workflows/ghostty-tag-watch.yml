@@ -1,10 +1,11 @@
 name: Ghostty tag watch
 
-# Weekly check: when Ghostty publishes a new stable semver TAG, open an issue so
-# warden can consider bumping GHOSTTY_REF onto a vetted release. Ghostty ships
+# Weekly check: when Ghostty or libghostty-vt publishes a new stable semver TAG, open an
+# issue so warden can consider bumping GHOSTTY_REF onto a vetted release. Ghostty ships
 # stable versions as git *tags* (only the nightly "tip" is a GitHub Release, and
 # it's a prerelease — releases/latest 404s), so we watch tags, not releases.
-# State is the committed marker .github/ghostty-latest-seen → one issue per tag.
+# State is one committed marker per line (.github/ghostty-latest-seen,
+# .github/libghostty-vt-latest-seen) → one issue per tag.
 on:
   schedule:
     - cron: "0 14 * * 1" # Mondays 14:00 UTC
@@ -30,46 +31,53 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/ghostty-tag-watch.yml/enable"
       - uses: actions/checkout@v7
-      - name: Check for a new Ghostty stable tag
+      # Two release lines, each with its own marker: Ghostty's app tags (vX.Y.Z — the GhosttyKit
+      # surface) and libghostty-vt's (vt-X.Y.Z — what warden-relay links). The build pins one
+      # commit for all three assets, so either line can be the reason to move GHOSTTY_REF.
+      - name: Check for new Ghostty and libghostty-vt stable tags
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          latest=$(gh api "repos/ghostty-org/ghostty/tags?per_page=100" --paginate --jq '.[].name' \
-            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-          [ -n "$latest" ] || { echo "[!] could not resolve latest Ghostty tag"; exit 1; }
-
-          marker=.github/ghostty-latest-seen
-          seen=$(cat "$marker" 2>/dev/null || echo "")
-          echo "latest=$latest seen=$seen"
-          if [ "$latest" = "$seen" ]; then echo "[*] no new stable tag"; exit 0; fi
-
-          sha=$(gh api "repos/ghostty-org/ghostty/commits/$latest" --jq .sha)
+          tags=$(gh api "repos/ghostty-org/ghostty/tags?per_page=100" --paginate --jq '.[].name')
           gh label create ghostty-update --color 1f6feb --description "Ghostty version bump" 2>/dev/null || true
-
-          printf '%s\n' \
-            "Ghostty published a new stable tag: **$latest** (\`$sha\`)." \
-            "" \
-            "warden pins a Ghostty commit via \`GHOSTTY_REF\`. To move onto this vetted, API-stable release:" \
-            "" \
-            "1. Set \`GHOSTTY_REF\` to \`$latest\` in this repo, commit, run the **Build GhosttyKit** workflow." \
-            "2. In warden: \`just revendor-ghostty\`, then diff \`Headers/ghostty.h\` against \`crates/warden-app/src/ffi/mod.rs\` — the embedding C API is unstable; the \`size_of\` guards fail the build on struct-size drift and the action-tag discriminants are generated from the header, but other positionally-transcribed enums are not guarded, so eyeball those." \
-            "3. Build + run warden to verify terminals, update \`vendor/PROVENANCE.md\`, commit." \
-            "" \
-            "Security fixes ride tags — if the release notes mention a CVE/security fix, treat this as urgent." \
-            "" \
-            "cc @Lockyc" \
-            "" \
-            "_Filed automatically by \`.github/workflows/ghostty-tag-watch.yml\`._" > /tmp/issue-body.md
-
-          gh issue create \
-            --title "Ghostty $latest released — consider bumping GHOSTTY_REF" \
-            --label ghostty-update \
-            --body-file /tmp/issue-body.md
-
-          echo "$latest" > "$marker"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$marker"
-          git commit -m "chore: mark Ghostty $latest as seen"
+
+          # name | tag regex | marker
+          while IFS='|' read -r name regex marker; do
+            latest=$(grep -E "$regex" <<<"$tags" | sort -V | tail -1 || true)
+            [ -n "$latest" ] || { echo "[!] could not resolve the latest $name tag"; exit 1; }
+            seen=$(cat "$marker" 2>/dev/null || echo "")
+            echo "$name: latest=$latest seen=$seen"
+            if [ "$latest" = "$seen" ]; then echo "[*] no new $name tag"; continue; fi
+
+            sha=$(gh api "repos/ghostty-org/ghostty/commits/$latest" --jq .sha)
+            printf '%s\n' \
+              "$name published a new stable tag: **$latest** (\`$sha\`)." \
+              "" \
+              "warden pins one Ghostty commit via \`GHOSTTY_REF\` for all three assets (GhosttyKit, its resources, libghostty-vt). To move onto this release:" \
+              "" \
+              "1. Set \`GHOSTTY_REF\` to \`$latest\` in this repo, commit, run the **Build GhosttyKit** workflow." \
+              "2. In warden: \`just revendor-ghostty\`, then diff \`Headers/ghostty.h\` against \`crates/warden-app/src/ffi/mod.rs\` — the embedding C API is unstable; the \`size_of\` guards fail the build on struct-size drift and the action-tag discriminants are generated from the header, but other positionally-transcribed enums are not guarded, so eyeball those. libghostty-vt's C ABI is stable within a major version; on a major bump, re-check \`crates/warden-relay/src/vt.rs\` against \`include/ghostty/vt/\`." \
+              "3. Build + run warden to verify terminals and a Rex pane's replay, update \`vendor/PROVENANCE.md\`, commit." \
+              "" \
+              "Security fixes ride tags — if the release notes mention a CVE/security fix, treat this as urgent." \
+              "" \
+              "cc @Lockyc" \
+              "" \
+              "_Filed automatically by \`.github/workflows/ghostty-tag-watch.yml\`._" > /tmp/issue-body.md
+
+            gh issue create \
+              --title "$name $latest released — consider bumping GHOSTTY_REF" \
+              --label ghostty-update \
+              --body-file /tmp/issue-body.md
+
+            echo "$latest" > "$marker"
+            git add "$marker"
+            git commit -m "chore: mark $name $latest as seen"
+          done <<'EOF'
+          Ghostty|^v[0-9]+\.[0-9]+\.[0-9]+$|.github/ghostty-latest-seen
+          libghostty-vt|^vt-[0-9]+\.[0-9]+\.[0-9]+$|.github/libghostty-vt-latest-seen
+          EOF
           git push

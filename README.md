@@ -50,7 +50,7 @@ Edit `GHOSTTY_REF` to a newer commit/tag, commit, and run the workflow (Actions 
 ▸ *Run workflow*). To test a ref without changing the pin, pass it as the `ghostty_ref` input; that build
 publishes as a prerelease, so warden (which vendors the latest release) never picks it up.
 `.github/workflows/ghostty-tag-watch.yml` checks weekly and opens a `ghostty-update` issue when
-Ghostty tags a new stable release.
+Ghostty tags a new stable release, either the app (`vX.Y.Z`) or libghostty-vt (`vt-X.Y.Z`).
 
 To add libghostty-vt to a release that already exists without rebuilding its other assets, run the
 workflow with `vt_only` ticked and `ghostty_ref` left empty (the pinned ref).

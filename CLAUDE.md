@@ -44,8 +44,9 @@ below), so there is no local recipe to wrap.
   resources + libghostty-vt). Single job on `macos-15`. The `vt_only` input builds just libghostty-vt and uploads it to the ref's existing release, leaving the other assets' bytes alone (a full run is not reproducible and clobbers them). Manual (`workflow_dispatch`) — bumping `GHOSTTY_REF` and
   re-running *is* the release.
 - **`.github/workflows/ghostty-tag-watch.yml`** — weekly (Mondays 14:00 UTC) + dispatchable. Opens
-  an issue when upstream publishes a new stable **tag**, so a `GHOSTTY_REF` bump onto a vetted
-  release gets considered. It watches tags, not releases: Ghostty ships stable versions as git tags
+  an issue when upstream publishes a new stable **tag** on either release line — Ghostty's
+  `vX.Y.Z` (the surface) or libghostty-vt's `vt-X.Y.Z` (what warden-relay links) — so a
+  `GHOSTTY_REF` bump onto a vetted release gets considered. It watches tags, not releases: Ghostty ships stable versions as git tags
   and only the nightly "tip" is a GitHub Release, so `releases/latest` 404s.
   - **It commits and pushes to `main` on its own.** After filing the issue it writes the new tag to
     the marker and pushes as `github-actions[bot]`. A lone `chore: mark Ghostty vX as seen` commit
@@ -54,8 +55,8 @@ below), so there is no local recipe to wrap.
     scheduled workflow after 60 days without repo activity, and a successful run with no new tag
     commits nothing — so without the keepalive the watch goes silent in a quiet stretch. Don't drop
     the step or move it after the check.
-- **`.github/ghostty-latest-seen`** — the watcher's entire state: the last upstream stable tag it
-  filed an issue for. Committed on purpose, and what makes the watch one-issue-per-tag rather than
+- **`.github/ghostty-latest-seen`** + **`.github/libghostty-vt-latest-seen`** — the watcher's
+  entire state: per release line, the last upstream stable tag it filed an issue for. Committed on purpose, and what makes the watch one-issue-per-tag rather than
   one-per-run. Editing it by hand re-arms (or suppresses) the next notification.
 
 ## Load-bearing invariants (don't regress)
