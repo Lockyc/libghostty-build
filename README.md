@@ -11,7 +11,7 @@ framework. The repo ships no library source of its own; the deliverable is the r
 
 ## What it produces
 
-Each Ghostty pin publishes one release tagged `ghostty-<short-sha>` (the newest is GitHub's "latest"),
+Each Ghostty pin publishes one release tagged `ghostty-<short-sha>` (the current pin's release is GitHub's "latest"; an override build is a prerelease),
 carrying **three** assets — each zipped, with a `.sha256` and a build-provenance attestation:
 
 - **`GhosttyKit.xcframework.zip`** — the universal (arm64 + x86_64) macOS `GhosttyKit.xcframework`
@@ -57,9 +57,9 @@ workflow with `vt_only` ticked and `ghostty_ref` left empty (the pinned ref).
 
 ## Consuming it (warden)
 
-warden pulls all three latest-release assets (the xcframework it links, the resources it
-bundles into `warden.app/Contents/Resources`, and libghostty-vt) into `crates/warden-app/vendor/` via
-`just revendor-ghostty`, checking each against its `.sha256`. See warden's `vendor/PROVENANCE.md`.
+warden pulls all three latest-release assets via `just revendor-ghostty`: the xcframework it
+links and the resources it bundles into `warden.app/Contents/Resources` go to
+`crates/warden-app/vendor/`, and libghostty-vt to `crates/warden-relay/vendor/libghostty-vt`, checking each against its `.sha256`. See warden's `vendor/PROVENANCE.md`.
 
 ## Licensing
 
