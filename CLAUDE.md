@@ -42,7 +42,9 @@ below), so there is no local recipe to wrap.
 - **`.github/workflows/build.yml`** — resolve ref → SHA → clone unmodified Ghostty → build → zip +
   sha256 + attest → publish release `ghostty-<short-sha>` with **three** assets (xcframework +
   resources + libghostty-vt). Single job on `macos-15`. The `vt_only` input builds just libghostty-vt and uploads it to the ref's existing release, leaving the other assets' bytes alone (a full run is not reproducible and clobbers them). Manual (`workflow_dispatch`) — bumping `GHOSTTY_REF` and
-  re-running *is* the release.
+  re-running *is* the release. The `ghostty_ref` input builds another ref without moving the pin;
+  that build publishes as a prerelease, so warden (which vendors the latest release) never picks it
+  up. `vt_only` with `ghostty_ref` left empty adds libghostty-vt to the pinned ref's release.
 - **`.github/workflows/ghostty-tag-watch.yml`** — weekly (Mondays 14:00 UTC) + dispatchable. Opens
   an issue when upstream publishes a new stable **tag** on either release line — Ghostty's
   `vX.Y.Z` (the surface) or libghostty-vt's `vt-X.Y.Z` (what warden-relay links) — so a

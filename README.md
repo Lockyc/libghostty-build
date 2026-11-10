@@ -1,26 +1,27 @@
 # libghostty-build
 
-CI that builds [Ghostty](https://github.com/ghostty-org/ghostty)'s embedding library from a
-**pinned, unmodified upstream commit** and publishes it as a release asset.
+[![Release](https://img.shields.io/github/v/release/lockyc/libghostty-build?label=release)](https://github.com/lockyc/libghostty-build/releases/latest)
+![Platform](https://img.shields.io/badge/platform-macOS-555)
+[![License](https://img.shields.io/github/license/lockyc/libghostty-build)](LICENSE)
 
-It builds the macOS **`GhosttyKit.xcframework`** — Ghostty's embedding framework (terminal
-surfaces, the `ghostty_surface_*` C API, the NSView host) — for
-[warden](https://github.com/lockyc/warden), which embeds libghostty as its terminal surface.
-Upstream Ghostty's releases carry only the app and `ghostty-vt` (the VT sublibrary), not this
-framework. The repo ships no library source of its own; the deliverable is the release asset.
+CI that builds [Ghostty](https://github.com/ghostty-org/ghostty)'s embedding library from a
+**pinned, unmodified upstream commit** and publishes it as a release asset. Upstream Ghostty's
+releases carry only the app and `ghostty-vt`, not the macOS `GhosttyKit.xcframework` an app needs
+to embed Ghostty's terminal surfaces. The repo ships no library source of its own; the
+deliverable is the release.
 
 ## What it produces
 
-Each Ghostty pin publishes one release tagged `ghostty-<short-sha>` (the current pin's release is GitHub's "latest"; an override build is a prerelease),
-carrying **three** assets — each zipped, with a `.sha256` and a build-provenance attestation:
+Each Ghostty pin publishes one release tagged `ghostty-<short-sha>`; the current pin's release is
+GitHub's "latest", and a test build of another ref is a prerelease. Each carries **three** assets,
+zipped, each with a `.sha256` and a build-provenance attestation:
 
 - **`GhosttyKit.xcframework.zip`** — the universal (arm64 + x86_64) macOS `GhosttyKit.xcframework`
-  (slice `macos-arm64_x86_64`).
+  (slice `macos-arm64_x86_64`): terminal surfaces, the `ghostty_surface_*` C API, the NSView host.
 - **`GhosttyResources.zip`** — libghostty's **runtime resources**: `terminfo/` (tic-compiled) plus
-  `ghostty/shell-integration/`, laid out to unpack straight into an embedder's `Contents/Resources`.
-- **`libghostty-vt-macos.zip`** — libghostty-vt, Ghostty's standalone VT library: a universal macOS
-  `lib/libghostty-vt.a` plus `include/ghostty/vt.h` and `vt/`, built with `-Demit-lib-vt` for
-  [warden](https://github.com/lockyc/warden)'s `warden-relay` helper.
+  `ghostty/shell-integration/`, laid out to unpack straight into an app's `Contents/Resources`.
+- **`libghostty-vt-macos.zip`** — libghostty-vt, Ghostty's standalone VT library: a universal
+  `lib/libghostty-vt.a` plus `include/ghostty/vt.h` and `vt/`.
 
 **Embedders must ship the resources.** Without `Contents/Resources/terminfo/78/xterm-ghostty`,
 libghostty sets **`TERM=xterm-256color`** instead of `xterm-ghostty` (logging *"ghostty terminfo not
@@ -28,41 +29,39 @@ found, using xterm-256color"*), and programs in the terminal lose **synchronized
 (DEC 2026)**, styled/coloured underlines, and shell integration — tmux then shows half-drawn frames
 and a flickering cursor in unfocused panes.
 
+## Use
+
+```bash
+gh release download --repo lockyc/libghostty-build --pattern '*.zip' --pattern '*.sha256'
+shasum -a 256 -c *.sha256
+gh attestation verify GhosttyKit.xcframework.zip --repo lockyc/libghostty-build
+```
+
+Pass a tag (`gh release download ghostty-<short-sha> …`) to pin one build instead of the latest.
+[warden](https://github.com/lockyc/warden) consumes all three with `just revendor-ghostty`, which
+checks each `.sha256` and records the Ghostty ref in its `vendor/PROVENANCE.md`.
+
 ## How the build works
 
-1. **`GHOSTTY_REF`** (a one-line file at the repo root) — the Ghostty ref (tag or SHA) to build.
-2. **`.github/workflows/build.yml`** (manual `workflow_dispatch`; optional ref override) on
-   **`macos-15`** with the Zig version Ghostty's `build.zig.zon` requires at that SHA:
-   - resolves the ref → SHA and clones **unmodified** Ghostty at it,
-   - runs `scripts/build-xcframework.sh`, which invokes Ghostty's own xcframework build
-     (`-Demit-xcframework`), unpatched,
-   - takes the universal (arm64 + x86_64) macOS library out of it and repackages it as a
-     macOS-only xcframework with the archive named `libghostty.a` (the compiled library is
-     unchanged),
-   - collects the runtime resources from `zig-out/share`,
-   - runs `scripts/build-vt.sh`, which builds libghostty-vt (`-Demit-lib-vt`) for aarch64 and
-     x86_64 and `lipo`s them into one universal `libghostty-vt.a`,
-   - zips, checksums, attests, and publishes the release.
+`GHOSTTY_REF`, a one-line file at the repo root, names the Ghostty tag or SHA to build.
+`.github/workflows/build.yml` (run by hand, on **`macos-15`**, with the Zig version Ghostty's
+`build.zig.zon` requires at that SHA):
 
-## Bumping the Ghostty version
+1. resolves the ref to a SHA and clones **unmodified** Ghostty at it;
+2. runs Ghostty's own xcframework build (`-Demit-xcframework`), unpatched, and repackages the
+   universal macOS library as a macOS-only xcframework with the archive named `libghostty.a`
+   (the compiled library is unchanged);
+3. collects the runtime resources from `zig-out/share`;
+4. builds libghostty-vt (`-Demit-lib-vt`) for aarch64 and x86_64 and `lipo`s them into one
+   universal library;
+5. zips, checksums, attests and publishes the release.
 
-Edit `GHOSTTY_REF` to a newer commit/tag, commit, and run the workflow (Actions ▸ *Build GhosttyKit*
-▸ *Run workflow*). To test a ref without changing the pin, pass it as the `ghostty_ref` input; that build
-publishes as a prerelease, so warden (which vendors the latest release) never picks it up.
-`.github/workflows/ghostty-tag-watch.yml` checks weekly and opens a `ghostty-update` issue when
-Ghostty tags a new stable release, either the app (`vX.Y.Z`) or libghostty-vt (`vt-X.Y.Z`).
+To move the pin, edit `GHOSTTY_REF`, commit, and run the workflow. A weekly workflow opens a
+`ghostty-update` issue when Ghostty tags a new stable release. Test builds, rebuilding one asset,
+and the rest of the maintainer runbook: [CLAUDE.md](CLAUDE.md).
 
-To add libghostty-vt to a release that already exists without rebuilding its other assets, run the
-workflow with `vt_only` ticked and `ghostty_ref` left empty (the pinned ref).
+## License
 
-## Consuming it (warden)
-
-warden pulls all three latest-release assets via `just revendor-ghostty`: the xcframework it
-links and the resources it bundles into `warden.app/Contents/Resources` go to
-`crates/warden-app/vendor/`, and libghostty-vt to `crates/warden-relay/vendor/libghostty-vt`, checking each against its `.sha256`. See warden's `vendor/PROVENANCE.md`.
-
-## Licensing
-
-The build scripts and workflow here are MIT (`LICENSE`). The **published assets contain compiled
-Ghostty and its runtime resources**, MIT-licensed by upstream; its notice travels with the binary
-(`LICENSE-ghostty`). This repo redistributes those files under that license.
+The build scripts and workflow here are MIT ([LICENSE](LICENSE)). The **published assets contain
+compiled Ghostty and its runtime resources**, MIT-licensed by upstream; its notice travels with
+the binary (`LICENSE-ghostty`). This repo redistributes those files under that license.
