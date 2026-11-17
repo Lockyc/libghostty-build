@@ -1,18 +1,20 @@
-name    = "libghostty-build"
+name = "libghostty-build"
 summary = "CI that builds Ghostty's embedding library from a pinned, unmodified upstream commit and publishes it as a release asset — build tooling, no library source of its own"
-kind    = "library"
-status  = "active"
-tags    = ["ci", "build-tooling", "ghostty", "libghostty", "macos"]
-stack   = ["zig", "github-actions", "bash"]
+status = "active"
+tags = ["ci", "build-tooling", "ghostty", "libghostty", "macos"]
 
 # CI-only build tooling: it vendors nothing (warden vendors from its releases), and its
 # build runs only in CI, on a pin. So the house baseline axes that assume a local build or
 # a house project surface (README badge, justfile, roadmap) don't apply, and
 # `fleet.sh audit` exempts them rather than red them. The docgraph pre-push gate applies.
 [fleet]
-exempt      = ["readme", "justfile", "roadmap"]
+exempt = ["readme", "justfile", "roadmap"]
 exempt_note = "CI-only build tooling; no local build to wrap"
 
 [[provides]]
-name    = "libghostty-artifacts"
+name = "libghostty-artifacts"
 summary = "Per-pin releases tagged ghostty-<short-sha>, each carrying the universal (arm64 + x86_64) GhosttyKit.xcframework, GhosttyResources (tic-compiled terminfo + shell-integration) and libghostty-vt-macos.zip (a universal libghostty-vt.a plus the vt.h headers), zipped with .sha256 and GitHub build-provenance attestation. Upstream publishes no full embedding framework, so an embedder must build it; pinning the commit lets a consumer track Ghostty on its own schedule and link a binary from known, unmodified upstream."
+
+[github]
+description = "CI that builds Ghostty's embedding library from a pinned, unmodified upstream commit and publishes it as a release asset — build tooling, no library source of its own"
+topics = ["bash", "build-tooling", "ci", "ghostty", "github-actions", "libghostty", "macos", "zig"]
