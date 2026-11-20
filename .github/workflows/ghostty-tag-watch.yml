@@ -76,8 +76,10 @@ jobs:
             echo "$latest" > "$marker"
             git add "$marker"
             git commit -m "chore: mark $name $latest as seen"
+            # Pushed with its issue, so a later failure in this run can't leave the issue filed
+            # without its marker, to be filed again next week.
+            git pull --rebase --quiet && git push
           done <<'EOF'
           Ghostty|^v[0-9]+\.[0-9]+\.[0-9]+$|.github/ghostty-latest-seen
           libghostty-vt|^vt-[0-9]+\.[0-9]+\.[0-9]+$|.github/libghostty-vt-latest-seen
           EOF
-          git push

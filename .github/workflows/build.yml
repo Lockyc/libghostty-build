@@ -90,6 +90,9 @@ jobs:
       - name: Package + checksum libghostty-vt
         run: |
           set -euo pipefail
+          # Ghostty's MIT notice travels inside every zip of its code and as a release asset.
+          cp LICENSE-ghostty dist/libghostty-vt/
+          cp LICENSE-ghostty dist/
           cd dist/libghostty-vt
           ditto -c -k --sequesterRsrc . ../libghostty-vt-macos.zip
           cd ..
@@ -99,6 +102,7 @@ jobs:
         if: ${{ !inputs.vt_only }}
         run: |
           set -euo pipefail
+          cp LICENSE-ghostty dist/GhosttyKit.xcframework/
           cd dist
           ditto -c -k --sequesterRsrc --keepParent GhosttyKit.xcframework GhosttyKit.xcframework.zip
           shasum -a 256 GhosttyKit.xcframework.zip | tee GhosttyKit.xcframework.zip.sha256
@@ -156,7 +160,7 @@ jobs:
           EOF
           )
           cd dist
-          VT_ASSETS="libghostty-vt-macos.zip libghostty-vt-macos.zip.sha256"
+          VT_ASSETS="libghostty-vt-macos.zip libghostty-vt-macos.zip.sha256 LICENSE-ghostty"
           if [ "$VT_ONLY" = true ]; then
             # Adds to the release the ref already has; the existing assets are never rebuilt or replaced.
             gh release view "$TAG" >/dev/null

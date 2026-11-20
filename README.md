@@ -57,11 +57,11 @@ checks each `.sha256` and records the Ghostty ref in its `vendor/PROVENANCE.md`.
 5. zips, checksums, attests and publishes the release.
 
 To move the pin, edit `GHOSTTY_REF`, commit, and run the workflow. A weekly workflow opens a
-`ghostty-update` issue when Ghostty tags a new stable release. Test builds, rebuilding one asset,
+`ghostty-update` issue when Ghostty or libghostty-vt tags a new stable release. Test builds, rebuilding one asset,
 and the rest of the maintainer runbook: [CLAUDE.md](CLAUDE.md).
 
 ## License
 
 The build scripts and workflow here are MIT ([LICENSE](LICENSE)). The **published assets contain
-compiled Ghostty and its runtime resources**, MIT-licensed by upstream; its notice travels with
-the binary (`LICENSE-ghostty`). This repo redistributes those files under that license.
+compiled Ghostty and its runtime resources**, MIT-licensed by upstream; its notice (`LICENSE-ghostty`) is
+inside `GhosttyKit.xcframework.zip` and `libghostty-vt-macos.zip` and attached to each release. This repo redistributes those files under that license.
