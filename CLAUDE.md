@@ -45,7 +45,8 @@ below), so there is no local recipe to wrap.
   re-running *is* the release. The `ghostty_ref` input builds another ref without moving the pin;
   that build publishes as a prerelease, so warden (which vendors the latest release) never picks it
   up. `vt_only` with `ghostty_ref` left empty adds libghostty-vt to the pinned ref's release.
-- **`.github/workflows/ghostty-tag-watch.yml`** — weekly (Mondays 14:00 UTC) + dispatchable. Opens
+- **`.github/workflows/ghostty-tag-watch.yml`** — weekly (the workflow's `schedule` cron) +
+  dispatchable. Opens
   an issue when upstream publishes a new stable **tag** on either release line — Ghostty's
   `vX.Y.Z` (the surface) or libghostty-vt's `vt-X.Y.Z` (what warden-relay links) — so a
   `GHOSTTY_REF` bump onto a vetted release gets considered. It watches tags, not releases: Ghostty ships stable versions as git tags
@@ -65,18 +66,10 @@ below), so there is no local recipe to wrap.
 
 - **Publish the runtime resources, not just the library — the library alone is an incomplete
   libghostty.** `GhosttyResources.zip` (`terminfo/` + `ghostty/shell-integration/`, rooted so it
-  unpacks straight into an embedder's `Contents/Resources`) is a **required** second asset. libghostty
-  locates itself at surface spawn by climbing from its executable for the sentinel
-  `Contents/Resources/terminfo/78/xterm-ghostty` (`src/os/resourcesdir.zig`); miss it and
-  `Subprocess.init` silently falls back to `TERM=xterm-256color` (`src/termio/Exec.zig`). The terminal
-  then advertises no `Sync` capability, so tmux stops bracketing its redraws in DEC 2026 — which is
-  the *one* thing that makes libghostty pause rendering — so it renders half-drawn frames, and an
-  unfocused surface (which draws its hollow cursor on **every** frame, bypassing the blink gate —
-  `src/renderer/cursor.zig`) flickers that cursor at whatever mid-repaint position it sampled. That
-  was warden's "cursor flashes around the screen when the window isn't focused" bug. We don't *build*
-  these: Ghostty's xcframework graph **always installs resources** (build.zig — its Xcode project
-  references them), so they already sit in `zig-out/share`; the script only collects them. The staging
-  step hard-fails when the sentinel is missing, precisely because the runtime failure is silent.
+  unpacks straight into an embedder's `Contents/Resources`) is a **required** second asset; why, and
+  why it is collected rather than built, is at the resources section of
+  `scripts/build-xcframework.sh`. The staging step hard-fails when the sentinel is missing, because
+  the runtime failure is silent.
 - **Ship `terminfo` + `shell-integration` only — themes/docs are deliberately excluded.** Both are
   gated off by default (`emit_themes`/`emit_docs`) and warden exposes no ghostty theme config, so
   they'd be dead weight in every clone that vendors this. Don't add `-Demit-themes` to "be complete".
@@ -87,23 +80,15 @@ below), so there is no local recipe to wrap.
   `-Dapp-runtime=none` does not emit `libghostty.a` without triggering the xcframework graph anyway.
   Use the native emit; don't reintroduce per-arch assembly. (We *do* run one
   `xcodebuild -create-xcframework` afterward — but only to *repackage*, see next point.)
-- **Repackage macOS-only, library renamed `libghostty.a` (bytes untouched).** Ghostty's native
-  xcframework ships the macOS archive as **`ghostty-internal.a`** (renamed from `libghostty.a` since
-  v1.3.1) and bundles **iOS slices** warden never uses (~130MB). warden's `build.rs` does
-  `link-lib=static=ghostty` → it needs a file literally named `libghostty.a` (the `lib` prefix is not
-  optional), macOS only. So after Ghostty builds, the script extracts the macOS-universal archive,
-  names it `libghostty.a`, and rebuilds a macOS-only xcframework around it. This renames/prunes the
-  *wrapper* only — the compiled libghostty bytes are exactly upstream's, so the "unmodified upstream"
-  claim holds. The script finds the `.a` by glob (not by the `ghostty-internal.a` name) so a future
-  upstream rename doesn't break it.
-- **Strip debug symbols (`strip -S`).** Zig's ReleaseFast archive carries ~220MB of DWARF (~280MB →
-  ~48MB stripped). `strip -S` removes debug symbols only; the exported `ghostty_*` C API is untouched,
-  so static linking is unaffected. Without this the vendored binary is 7× larger for no benefit —
-  warden never debugs into libghostty. Don't drop the strip to "keep symbols"; reproduce a
-  symbolicated build from the pinned commit if ever needed.
+- **Repackage macOS-only, library renamed `libghostty.a` (bytes untouched).** The reasons are in
+  `scripts/build-xcframework.sh`'s header. The script finds the `.a` by glob, not by upstream's
+  current name, so an upstream rename doesn't break it.
+- **Strip debug symbols (`strip -S`).** The reason and sizes are at the strip in
+  `scripts/build-xcframework.sh`. Don't drop it to "keep symbols"; reproduce a symbolicated build
+  from the pinned commit if ever needed.
 - **Build on `macos-15`.** Sequoia's 15.x SDK is the one this build is verified against; Zig 0.15.2
   could not link the macOS 26 SDK. Whether 0.17.0 can is untried here. Upstream's own macOS CI runs
-  on Tahoe, so a `macos-26` run (or a local build on this macOS 26 machine) is the test that would
+  on Tahoe, so a `macos-26` run (or a local build on macOS 26) is the test that would
   lift the CI-only constraint.
 - **The Zig version is read from Ghostty's `build.zig.zon`** (`minimum_zig_version` at the SHA being
   built, build.yml's "Read Ghostty's minimum Zig version" step), never pinned here: Zig is not
@@ -118,10 +103,9 @@ below), so there is no local recipe to wrap.
 
 ## Build flags that broke on a version bump (footgun)
 
-Flags cribbed from an older Ghostty can vanish. The first attempt used `-Dinspector` and
-`-Dcustom-shaders` (valid at v1.3.1, **removed** by `main`); zig rejects unknown `-D` options before
-compiling. When bumping `GHOSTTY_REF` across a big jump and the build dies at option parsing, diff the
-flags against `src/build/Config.zig` at the new SHA rather than assuming a deeper failure.
+Flags valid at one Ghostty version can be gone at the next, and zig rejects an unknown `-D` option
+before compiling. When a `GHOSTTY_REF` bump dies at option parsing, diff the flags against
+`src/build/Config.zig` at the new SHA rather than assuming a deeper failure.
 
 ## Known deviation from the libghostty-spm reference
 
