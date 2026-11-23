@@ -32,6 +32,8 @@ below), so there is no local recipe to wrap.
 - **`GHOSTTY_REF`** — single source of truth: the Ghostty ref to build (a stable tag or a commit
   SHA). The workflow resolves it to a SHA, and the release is tagged by the resolved short SHA.
   Bumping Ghostty = edit this file + re-run the workflow. Never hard-code the ref anywhere else.
+  **It tracks Ghostty `main`, not tags:** stable tags come months apart, and warden needs upstream
+  fixes as they land. A bump takes `main`'s HEAD SHA; a tag is pinned only when it is `main`'s HEAD.
 - **`scripts/build-xcframework.sh`** — clones nothing; takes a Ghostty source tree + output dir and
   runs Ghostty's **own** native xcframework build, then stages the result. Applies no patches — we
   build unmodified upstream on purpose.
@@ -48,8 +50,8 @@ below), so there is no local recipe to wrap.
 - **`.github/workflows/ghostty-tag-watch.yml`** — weekly (the workflow's `schedule` cron) +
   dispatchable. Opens
   an issue when upstream publishes a new stable **tag** on either release line — Ghostty's
-  `vX.Y.Z` (the surface) or libghostty-vt's `vt-X.Y.Z` (what warden-relay links) — so a
-  `GHOSTTY_REF` bump onto a vetted release gets considered. It watches tags, not releases: Ghostty ships stable versions as git tags
+  `vX.Y.Z` (the surface) or libghostty-vt's `vt-X.Y.Z` (what warden-relay links) — as one prompt
+  to bump `GHOSTTY_REF` to `main`. It watches tags, not releases: Ghostty ships stable versions as git tags
   and only the nightly "tip" is a GitHub Release, so `releases/latest` 404s.
   - **It commits and pushes to `main` on its own.** After filing the issue it writes the new tag to
     the marker and pushes as `github-actions[bot]`. A lone `chore: mark Ghostty vX as seen` commit
