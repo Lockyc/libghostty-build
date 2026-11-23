@@ -29,11 +29,11 @@ below), so there is no local recipe to wrap.
 
 ## Layout
 
-- **`GHOSTTY_REF`** — single source of truth: the Ghostty ref to build (a stable tag or a commit
-  SHA). The workflow resolves it to a SHA, and the release is tagged by the resolved short SHA.
-  Bumping Ghostty = edit this file + re-run the workflow. Never hard-code the ref anywhere else.
-  **It tracks Ghostty `main`, not tags:** stable tags come months apart, and warden needs upstream
-  fixes as they land. A bump takes `main`'s HEAD SHA; a tag is pinned only when it is `main`'s HEAD.
+- **`GHOSTTY_REF`** — single source of truth: the Ghostty commit to build. The workflow resolves it
+  to a SHA, and the release is tagged by the resolved short SHA. Bumping Ghostty = edit this file +
+  re-run the workflow. Never hard-code the ref anywhere else.
+  **It tracks Ghostty `main`, never a tag:** stable tags come months apart, and warden needs upstream
+  fixes as they land. A bump always takes `main`'s HEAD SHA, whatever prompted it.
 - **`scripts/build-xcframework.sh`** — clones nothing; takes a Ghostty source tree + output dir and
   runs Ghostty's **own** native xcframework build, then stages the result. Applies no patches — we
   build unmodified upstream on purpose.

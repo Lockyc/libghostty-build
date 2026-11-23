@@ -43,7 +43,7 @@ checks each `.sha256` and records the Ghostty ref in its `vendor/PROVENANCE.md`.
 
 ## How the build works
 
-`GHOSTTY_REF`, a one-line file at the repo root, names the Ghostty tag or SHA to build.
+`GHOSTTY_REF`, a one-line file at the repo root, names the Ghostty commit to build: a SHA on `main`.
 `.github/workflows/build.yml` (run by hand, on **`macos-15`**, with the Zig version Ghostty's
 `build.zig.zon` requires at that SHA):
 
@@ -57,7 +57,8 @@ checks each `.sha256` and records the Ghostty ref in its `vendor/PROVENANCE.md`.
 5. zips, checksums, attests and publishes the release.
 
 To move the pin, edit `GHOSTTY_REF`, commit, and run the workflow. A weekly workflow opens a
-`ghostty-update` issue when Ghostty or libghostty-vt tags a new stable release. Test builds, rebuilding one asset,
+`ghostty-update` issue when Ghostty or libghostty-vt tags a new stable release, as a prompt to move
+the pin to `main`. Test builds, rebuilding one asset,
 and the rest of the maintainer runbook: [CLAUDE.md](CLAUDE.md).
 
 ## License
