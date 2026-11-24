@@ -1,7 +1,7 @@
 name: Ghostty tag watch
 
 # Weekly check: when Ghostty or libghostty-vt publishes a new stable semver TAG, open an
-# issue so warden can consider bumping GHOSTTY_REF onto a vetted release. Ghostty ships
+# issue prompting a move of GHOSTTY_REF to Ghostty main's HEAD. Ghostty ships
 # stable versions as git *tags* (only the nightly "tip" is a GitHub Release, and
 # it's a prerelease — releases/latest 404s), so we watch tags, not releases.
 # State is one committed marker per line (.github/ghostty-latest-seen,
@@ -56,7 +56,7 @@ jobs:
             printf '%s\n' \
               "$name published a new stable tag: **$latest** (\`$sha\`)." \
               "" \
-              "warden pins one Ghostty commit via \`GHOSTTY_REF\` for all three assets (GhosttyKit, its resources, libghostty-vt). It tracks Ghostty \`main\`, not tags, so this tag is a prompt to move to \`main\`, which already contains it:" \
+              "This repo pins one Ghostty commit via \`GHOSTTY_REF\` for all three assets (GhosttyKit, its resources, libghostty-vt), which warden vendors. It tracks Ghostty \`main\`, not tags, so this tag is a prompt to move to \`main\`, which already contains it:" \
               "" \
               "1. Set \`GHOSTTY_REF\` to \`main\`'s HEAD SHA (\`gh api repos/ghostty-org/ghostty/commits/main --jq .sha\`), never to \`$latest\`; commit, run the **Build GhosttyKit** workflow." \
               "2. In warden, follow \`crates/warden-app/vendor/PROVENANCE.md\` § Updating." \
