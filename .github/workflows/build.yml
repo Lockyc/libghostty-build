@@ -134,7 +134,9 @@ jobs:
           TAG="ghostty-$SHORT"
           # warden vendors the latest release: a pinned build becomes latest (including a rollback
           # to a pin whose release already exists); an override test build is a prerelease, never latest.
-          if [ "$IS_OVERRIDE" = true ]; then CHANNEL=--prerelease; else CHANNEL=--latest; fi
+          # A pinned build clears the prerelease flag explicitly: GitHub never makes a prerelease
+          # latest, and the SHA may already have a release from an earlier override test build.
+          if [ "$IS_OVERRIDE" = true ]; then CHANNEL=(--prerelease); else CHANNEL=(--latest --prerelease=false); fi
           # No apostrophes in NOTES: the heredoc sits inside $( ), where bash still parses the body
           # for quotes, so a lone ' fails the whole step with "unexpected EOF while looking for `''".
           NOTES=$(cat <<EOF
@@ -172,6 +174,6 @@ jobs:
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "$NOTES" \
-            "$CHANNEL" \
+            "${CHANNEL[@]}" \
             $ASSETS \
-            || { gh release upload "$TAG" $ASSETS --clobber; gh release edit "$TAG" --notes "$NOTES" "$CHANNEL"; }
+            || { gh release upload "$TAG" $ASSETS --clobber; gh release edit "$TAG" --notes "$NOTES" "${CHANNEL[@]}"; }
