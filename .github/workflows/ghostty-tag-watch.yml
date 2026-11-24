@@ -59,8 +59,7 @@ jobs:
               "warden pins one Ghostty commit via \`GHOSTTY_REF\` for all three assets (GhosttyKit, its resources, libghostty-vt). It tracks Ghostty \`main\`, not tags, so this tag is a prompt to move to \`main\`, which already contains it:" \
               "" \
               "1. Set \`GHOSTTY_REF\` to \`main\`'s HEAD SHA (\`gh api repos/ghostty-org/ghostty/commits/main --jq .sha\`), never to \`$latest\`; commit, run the **Build GhosttyKit** workflow." \
-              "2. In warden: \`just revendor-ghostty\`, then diff \`Headers/ghostty.h\` against \`crates/warden-app/src/ffi/mod.rs\` — the embedding C API is unstable; the \`size_of\` guards fail the build on struct-size drift and the action-tag discriminants are generated from the header, but other positionally-transcribed enums are not guarded, so eyeball those. libghostty-vt's C ABI is stable within a major version; on a major bump, re-check \`crates/warden-relay/src/vt.rs\` against \`include/ghostty/vt/\`." \
-              "3. Build + run warden to verify terminals and a Rex pane's replay, update \`vendor/PROVENANCE.md\`, commit." \
+              "2. In warden, follow \`crates/warden-app/vendor/PROVENANCE.md\` § Updating." \
               "" \
               "If the release notes mention a CVE/security fix, treat this as urgent." \
               "" \
